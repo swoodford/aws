@@ -7,10 +7,8 @@ if ! [ -f ~/.s3cfg ]; then
     exit 1
 fi
 
+# Convert bytes to human readable
 function bytestohr(){
-    # Convert input parameter (number of bytes) 
-    # to Human Readable form
-    #
     SLIST="bytes,KB,MB,GB,TB,PB,EB,ZB,YB"
 
     POWER=1
