@@ -22,12 +22,9 @@ if [[ -z $DELETEDATE ]]; then
 	exit 1
 fi
 
-
 DESCRIBESNAPSHOTS=$(aws ec2 describe-snapshots --filters Name=tag:SnapshotDate,Values="$DELETEDATE" Name=tag:SnapshotCreation,Values="Automatic" --output text)
 
 TOTALSNAPSHOTS=$(echo "$DESCRIBESNAPSHOTS" | grep Name | cut -f 3 | nl | wc -l)
-
-# echo $TOTALSNAPSHOTS
 
 echo " "
 echo "====================================================="
