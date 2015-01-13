@@ -8,6 +8,9 @@ if [[ $INSTALL =~ ^([yY][eE][sS]|[yY])$ ]]; then
 	# Test if PIP is installed
 	command -v pip >/dev/null 2>&1 || {
 		brew install python
+
+		echo "Installing PIP"
+		sudo easy_install pip
 	}
 
 	# Test if AWS CLI is installed
