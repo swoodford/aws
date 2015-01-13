@@ -20,8 +20,10 @@ command -v cli53 >/dev/null 2>&1 || {
 # 	# exit 1
 # fi
 
-# read -rp "Attempt to configure cli53 using AWS CLI credentials? (y/n) " CONFIGURE
-# if [[ $CONFIGURE =~ ^([yY][eE][sS]|[yY])$ ]]; then
+# Test for ~/.boto file
+if ! [ -f ~/.boto ]; then
+	# read -rp "Attempt to configure cli53 using AWS CLI credentials? (y/n) " CONFIGURE
+	# if [[ $CONFIGURE =~ ^([yY][eE][sS]|[yY])$ ]]; then
 	# Look for AWS CLI credentials
 	echo "Attempting to configure cli53 using AWS CLI credentials..."
 	if grep -q aws_access_key_id ~/.aws/config; then
@@ -34,10 +36,17 @@ command -v cli53 >/dev/null 2>&1 || {
 		echo "Error: AWS config not found or CLI not installed."
 		exit 1
 	fi
-# fi
 
-echo "Found AWS_ACCESS_KEY_ID:" $AWS_ACCESS_KEY_ID
-echo "Found AWS_SECRET_ACCESS_KEY:" $AWS_SECRET_ACCESS_KEY
+	echo "Found AWS_ACCESS_KEY_ID:" $AWS_ACCESS_KEY_ID
+	echo "Found AWS_SECRET_ACCESS_KEY:" $AWS_SECRET_ACCESS_KEY
+	echo "Building ~/.boto config file with these credentials..."
+
+	# Build ~/.boto config file
+	echo "[Credentials]" >> ~/.boto
+	echo "aws_access_key_id = "$AWS_ACCESS_KEY_ID >> ~/.boto
+	echo "aws_secret_access_key = "$AWS_SECRET_ACCESS_KEY >> ~/.boto
+
+fi
 
 # Get list of Hosted Zones in Route 53
 DOMAINLIST=$(aws route53 list-hosted-zones --output text | cut -f 4 | rev | cut -c 2- | rev)
@@ -64,7 +73,7 @@ do
 	echo "========================================="
 	echo \#$COUNT
 	DOMAIN_ID=$(echo "$DOMAINLIST" | nl | grep -w $COUNT | cut -f 2)
-	cli53 export $DOMAIN_ID > route53zones/$DOMAIN_ID.zone
+	cli53 export --full $DOMAIN_ID > route53zones/$DOMAIN_ID.zone
 	echo "Exported: "$DOMAIN_ID
 done
 
