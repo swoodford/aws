@@ -9,4 +9,5 @@ A collection of shell scripts for automating various tasks with Amazon Web Servi
 - **ec2-import-network-acl.sh** Import CIDR IP list to AWS VPC ACL rule and deny access
 - **install-awscli.sh** Install and configure AWS CLI
 - **install-s3cmd.sh** Install and setup s3cmd from the GitHub Repo
+- **route53-export-zones.sh** Uses cli53 to export the zone file for each Hosted Zone domain in Route 53
 - **s3-buckets-file-size.sh** Count total size of all data stored in all S3 buckets
