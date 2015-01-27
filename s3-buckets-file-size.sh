@@ -28,7 +28,7 @@ function bytestohr(){
 S3CMDLS=$(s3cmd ls)
 
 # Count number of buckets
-TOTALNUMBERS3BUCKETS=$(echo "$S3CMDLS" | wc -l | cut -d ' ' -f 6)
+TOTALNUMBERS3BUCKETS=$(echo "$S3CMDLS" | wc -l | cut -d ' ' -f 7)
 
 # Get list of all bucket names
 BUCKETNAMES=$(echo "$S3CMDLS" | cut -d ' ' -f 4 | nl)
