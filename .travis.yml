@@ -5,3 +5,10 @@ before_script:
 
 script:
     - bash equality_test.sh
+
+notifications: 
+  email: 
+    on_failure: 
+      - always
+    on_success: 
+      - never
