@@ -1,9 +1,14 @@
 #!/bin/bash
 # This script will read from the list of CIDR IPs in the file ipblacklistmaster 
-# Then create an AWS VPC ACL rule to deny access to each CIDR IP specified
+# Then create an AWS EC2 Classic ACL rule to deny access to each CIDR IP specified
 
 # VERY IMPORTANT to set the correct Network ACL ID for the intended ACL
 NETWORKACLID="YOUR-ACL-ID-HERE"
+
+if [ "$NETWORKACLID" = "YOUR-ACL-ID-HERE" ]; then
+	tput setaf 1; echo "Failed to set Network ACL ID!" && tput sgr0
+	exit 1
+fi
 
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
