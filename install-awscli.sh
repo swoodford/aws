@@ -15,7 +15,7 @@ if [[ $INSTALL =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
 	# Test if AWS CLI is installed
 	command -v aws >/dev/null 2>&1 || {
-		pip install awscli
+		sudo pip install awscli
 
 		aws configure
 		complete -C '/usr/local/aws/bin/aws_completer' aws
