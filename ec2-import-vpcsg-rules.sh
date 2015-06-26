@@ -1,7 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 # This script will read from the list of IPs in the file iplist
 # Then create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 # Due to AWS limits a group can only have 50 rules and will create multiple groups if greater than 50 rules
+# Requires the AWS CLI
 
 # Set Variables
 GROUPNAME="YOUR GROUP NAME"
