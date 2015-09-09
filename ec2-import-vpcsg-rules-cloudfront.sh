@@ -35,6 +35,7 @@ function addRules (){
 		echo "====================================================="
 		echo "Creating Security Group "$GROUPNAME
 		GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID)
+		echo $GROUPID
 		aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
 		echo "====================================================="
 	else
@@ -42,7 +43,28 @@ function addRules (){
 		echo "====================================================="
 		echo "Group $GROUPNAME Already Exists"
 		GROUPID=$(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2)
-		echo "====================================================="
+		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
+		if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
+			echo
+			echo "====================================================="
+			echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
+			echo "====================================================="
+			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" 2>&1)
+			if echo $DELETEGROUP | grep -q error; then
+				fail $DELETEGROUP
+			else
+				echo
+				echo "====================================================="
+				echo "Creating Security Group "$GROUPNAME
+				GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID)
+				echo $GROUPID
+				aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
+				echo "====================================================="
+			fi
+		else
+			echo "Exiting"
+			exit 1
+		fi
 	fi
 	echo
 	echo
