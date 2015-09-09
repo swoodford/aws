@@ -9,6 +9,7 @@ A collection of shell scripts for automating various tasks with Amazon Web Servi
 - **ec2-create-snapshots.sh** Create a snapshot of each EC2 volume that is tagged with the backup flag
 - **ec2-delete-snapshots.sh** Deletes snapshots for each EC2 volume that is tagged with the backup flag and matches the specified date
 - **ec2-import-network-acl.sh** Import CIDR IP list to AWS EC2 Classic ACL rules and deny access
+- **ec2-import-vpcsg-rules-cloudfront.sh** Create VPC Security Group with Cloudfront IP ranges
 - **ec2-import-vpcsg-rules.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 - **ec2-import-vpcsg-rules-pingdom.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified, setup to import rules for Pingdom probe servers
 - **elb-upload-ssl-cert.sh** Upload an SSL Certificate to AWS for use in setting up an ELB
