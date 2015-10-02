@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # This script checks Cloudfront Distributions for cache invalidation status
+# Requires jq
 
 # If you use an AWS CLI profile set it here:
 # profile=profilename
@@ -18,6 +19,15 @@ function fail(){
 	tput setaf 1; echo "Failure: $*" && tput sgr0
 	exit 1
 }
+
+# Verify AWS CLI Credentials are setup
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
+if ! [ -f ~/.aws/config ]; then
+  if ! [ -f ~/.aws/credentials ]; then
+    fail "Error: AWS config not found or CLI not installed."
+    exit 1
+  fi
+fi
 
 # Check for Distributions
 function distributionsCheck(){
