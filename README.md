@@ -5,6 +5,7 @@ A collection of shell scripts for automating various tasks with Amazon Web Servi
 
 [![Build Status](https://travis-ci.org/swoodford/aws.svg?branch=master)](https://travis-ci.org/swoodford/aws)
 
+- **cloudfront-invalidation-status.sh** Checks Cloudfront Distributions for cache invalidation status to complete
 - **create-cloudwatch-alarms.sh** Create AWS CloudWatch alarms for EC2, RDS, Load Balancer environments
 - **ec2-create-snapshots.sh** Create a snapshot of each EC2 volume that is tagged with the backup flag
 - **ec2-delete-snapshots.sh** Deletes snapshots for each EC2 volume that is tagged with the backup flag and matches the specified date
