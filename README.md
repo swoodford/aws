@@ -3,6 +3,10 @@ aws
 
 A collection of shell scripts for automating various tasks with Amazon Web Services
 
+Most require the AWS CLI: https://aws.amazon.com/cli/
+
+and jq: https://stedolan.github.io/jq/
+
 [![Build Status](https://travis-ci.org/swoodford/aws.svg?branch=master)](https://travis-ci.org/swoodford/aws)
 
 - **cloudfront-invalidation-status.sh** Checks Cloudfront Distributions for cache invalidation status to complete
