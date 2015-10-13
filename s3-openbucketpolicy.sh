@@ -41,7 +41,7 @@ function setS3Policy {
 
 # Validate the new policy
 function validateS3Policy {
-	bucketpolicy=$(aws s3api get-bucket-policy --bucket $s3bucketname)
+	bucketpolicy=$(aws s3api get-bucket-policy --bucket $s3bucketname --output text)
 	jsonpolicy=$(cat policy.json | tr -d '\n')
 
 	# echo "$bucketpolicy" > bucketpolicy
