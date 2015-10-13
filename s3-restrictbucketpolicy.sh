@@ -61,6 +61,36 @@ function validateCIDR {
 	fi
 }
 
+# New Validate CIDR notation
+function newValidateCIDR(){
+	while read iplist
+	do
+		if ! echo $iplist | egrep -q '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'; then
+			echo $iplist/32 >> iplist3
+		else echo $iplist >> iplist3
+		fi
+	done < iplist
+	mv iplist3 iplist
+}
+
+# Remove any empty lines
+function removeEmptyLines(){
+	while read iplist
+	do
+		if echo $iplist | egrep -q '^/32$'; then
+			echo $iplist | sed -i '/\/32/d' |  cat -s >> iplist4
+		else echo $iplist >> iplist4
+		fi
+	done < iplist
+	mv iplist4 iplist
+
+	if grep -qv '/[0-9]' iplist; then
+		echo "One or more lines contain invalid or missing CIDR notation. Please fix line:"
+		grep -vn '/[0-9]' iplist
+		failed
+	fi
+}
+
 # Cleanup list
 function cleanup {
 	sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 iplist | uniq > iplist2
@@ -94,7 +124,7 @@ function setS3Policy {
 
 # Validate the new policy
 function validateS3Policy {
-	bucketpolicy=$(aws s3api get-bucket-policy --bucket $s3bucketname | jq '.Statement | .[] | .Condition | .IpAddress | ."aws:SourceIp" | .[]' | cut -d \" -f2 | sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4)
+	bucketpolicy=$(aws s3api get-bucket-policy --bucket $s3bucketname --output text | jq '.Statement | .[] | .Condition | .IpAddress | ."aws:SourceIp" | .[]' | cut -d \" -f2 | sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4)
 	jsonpolicy=$(cat policy.json | tr -d '\n' | jq '.Statement | .[] | .Condition | .IpAddress | ."aws:SourceIp" | .[]' | cut -d \" -f2)
 
 	# echo "$bucketpolicy" > bucketpolicy
@@ -170,7 +200,9 @@ if [ "$s3bucketname" = "YOUR-S3-BUCKET-NAME" ]; then
 	fail "You must set your S3 bucket name in the script variables."
 fi
 
-validateCIDR
+# validateCIDR
+newValidateCIDR
+removeEmptyLines
 cleanup
 JSONizeiplist
 setBucketName $1
