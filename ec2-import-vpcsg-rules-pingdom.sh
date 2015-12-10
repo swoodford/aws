@@ -3,7 +3,7 @@
 # This script will save a list of current Pingdom probe server IPs in the file pingdom-probe-servers.txt
 # Then create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 # Due to AWS limits a group can only have 50 rules and will create multiple groups if greater than 50 rules
-# Requires the AWS CLI
+# Requires the AWS CLI, jq, wget, perl
 
 # Set Variables
 GROUPNAME="Pingdom"
@@ -376,6 +376,12 @@ function validateVPCID(){
 
 
 # Run the script and call functions
+
+# Check for required applications
+check_command "jq"
+check_command "wget"
+check_command "perl"
+check_command "aws"
 
 echo "This script will save a list of current Pingdom probe server IPs in the file pingdom-probe-servers.txt"
 echo "then create an AWS VPC Security Group with rules to allow access to each IP at the port specified."
