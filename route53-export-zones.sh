@@ -49,7 +49,7 @@ if ! [ -f ~/.boto ]; then
 fi
 
 # Get list of Hosted Zones in Route 53
-DOMAINLIST=$(aws route53 list-hosted-zones --output text | cut -f 4 | rev | cut -c 2- | rev)
+DOMAINLIST=$(aws route53 list-hosted-zones --output text | cut -f 4 | rev | cut -c 2- | rev | grep -v '^$')
 # Count domains found
 TOTALDOMAINS=$(echo "$DOMAINLIST" | wc -l)
 
