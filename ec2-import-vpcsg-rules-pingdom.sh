@@ -403,8 +403,12 @@ validateVPCID
 
 probeIPs
 
-# Assume we're always going to have > 50 rules
-# addRules50
+# Determine number of security groups needed since AWS limit is 50 rules per group
+
+# More than 100 rules
+if [ "$TOTALIPS" -gt "100" ]; then
+	fail "Greater than 100 IPs not yet supported."
+fi
 
 # Create one group with 50 rules or less
 if [ "$TOTALIPS" -lt "51" ]; then
@@ -414,9 +418,4 @@ fi
 # Create multiple groups for more than 50 rules
 if [ "$TOTALIPS" -gt "50" ]; then
 	addRules50
-fi
-
-# More than 100 rules
-if [ "$TOTALIPS" -gt "100" ]; then
-	fail "Greater than 100 IPs not yet supported."
 fi
