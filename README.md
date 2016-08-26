@@ -17,6 +17,7 @@ and jq: https://stedolan.github.io/jq/
 - **ec2-import-vpcsg-rules-cloudfront.sh** Create VPC Security Group with Cloudfront IP ranges
 - **ec2-import-vpcsg-rules.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 - **ec2-import-vpcsg-rules-pingdom.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified, setup to import rules for Pingdom probe servers
+- **ec2-import-waf-ip-set.sh** Import list of current Pingdom probe server IPs into WAF IP Set
 - **elastic-beanstalk-set-hostname-within-instance.sh** Set the hostname on Elastic Beanstalk servers from within the instance with their EB environment name and public IP address
 - **elastic-beanstalk-update-hostnames.sh** Updates the hostname on Elastic Beanstalk servers with their environment name and IP address
 - **elb-upload-ssl-cert.sh** Upload an SSL Certificate to AWS for use in setting up an ELB
