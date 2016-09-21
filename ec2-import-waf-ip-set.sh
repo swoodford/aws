@@ -9,12 +9,6 @@
 CONDITIONNAME="Pingdom"
 DEBUGMODE="0"
 
-# Ensure Variables are set
-if [ "$CONDITIONNAME" = "YOUR-CONDITION-NAME-HERE" ]; then
-	fail "Must set variables!"
-	exit 1
-fi
-
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 if ! grep -q aws_access_key_id ~/.aws/config; then
@@ -244,6 +238,12 @@ function WAF(){
 # Check required commands
 check_command "aws"
 check_command "jq"
+
+# Ensure Variables are set
+if [ "$CONDITIONNAME" = "YOUR-CONDITION-NAME-HERE" ]; then
+	fail "Must set variables!"
+	exit 1
+fi
 
 GetProbeIPs
 
