@@ -12,6 +12,7 @@ and jq: https://stedolan.github.io/jq/
 - **cloudfront-invalidation-status.sh** Checks Cloudfront Distributions for cache invalidation status to complete
 - **create-cloudwatch-alarms.sh** Create AWS CloudWatch alarms for EC2, RDS, Load Balancer environments
 - **ec2-create-snapshots.sh** Create a snapshot of each EC2 volume that is tagged with the backup flag
+- **ec2-export-elb-template.sh** Export an ELB to a JSON template file for version control, duplication or recreation
 - **ec2-delete-snapshots.sh** Deletes snapshots for each EC2 volume that is tagged with the backup flag and matches the specified date
 - **ec2-import-network-acl.sh** Import CIDR IP list to AWS EC2 Classic ACL rules and deny access
 - **ec2-import-vpcsg-rules-cloudfront.sh** Create VPC Security Group with Cloudfront IP ranges
