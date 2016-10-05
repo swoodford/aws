@@ -11,10 +11,10 @@
 ELBname="YOUR-EXISTING-ELB-NAME-HERE"
 NewELBname="YOUR-NEW-ELB-NAME-HERE"
 
-TemplateFileName=$ELBname-template.json
 
 # Options
 CreateTemplateFile=true
+TemplateFileName=$ELBname-template.json
 CreateNewELB=true
 RegisterInstances=true
 ConfigureHealthCheck=true
@@ -55,12 +55,17 @@ check_command "aws"
 check_command "jq"
 
 # Ensure Variables are set
-if [ "$ELBname" = "YOUR-EXISTING-ELB-NAME-HERE" ] || [ "$NewELBname" = "YOUR-NEW-ELB-NAME-HERE" ] || [ -z "$ELBname" ] || [ -z "$NewELBname" ] || [ -z "$TemplateFileName" ]; then
+if [ "$ELBname" = "YOUR-EXISTING-ELB-NAME-HERE" ] || [ -z "$ELBname" ]; then
 	fail "Must set variables!"
 fi
 
 # Create Template File
 if [ "$CreateTemplateFile" = "true" ]; then
+
+	# Ensure Variables are set
+	if [ -z "$TemplateFileName" ]; then
+		fail "Must set variables!"
+	fi
 
 	# Check for existing Template file
 	if [ -f $TemplateFileName ]; then
@@ -111,6 +116,11 @@ fi
 
 # Create New ELB
 if [ "$CreateNewELB" = "true" ]; then
+	# Ensure Variables are set
+	if [ "$NewELBname" = "YOUR-NEW-ELB-NAME-HERE" ] || [ -z "$NewELBname" ]; then
+		fail "Must set variables!"
+	fi
+
 	# Verify Template file exists
 	if ! [ -f $TemplateFileName ]; then
 		fail "Unable to find template file:" $TemplateFileName
