@@ -56,7 +56,7 @@ check_command "jq"
 
 # Ensure Variables are set
 if [ "$ELBname" = "YOUR-EXISTING-ELB-NAME-HERE" ] || [ -z "$ELBname" ]; then
-	fail "Must set variables!"
+	fail "Must set variable for existing ELB name!"
 fi
 
 # Create Template File
@@ -64,7 +64,7 @@ if [ "$CreateTemplateFile" = "true" ]; then
 
 	# Ensure Variables are set
 	if [ -z "$TemplateFileName" ]; then
-		fail "Must set variables!"
+		fail "Must set variable for template file name!"
 	fi
 
 	# Check for existing Template file
@@ -118,7 +118,7 @@ fi
 if [ "$CreateNewELB" = "true" ]; then
 	# Ensure Variables are set
 	if [ "$NewELBname" = "YOUR-NEW-ELB-NAME-HERE" ] || [ -z "$NewELBname" ]; then
-		fail "Must set variables!"
+		fail "Must set variable for new ELB name!"
 	fi
 
 	# Verify Template file exists
