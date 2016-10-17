@@ -316,8 +316,12 @@ if [ "$CreateNewELB" = "true" ]; then
 
 	# json=$(cat output.json)
 
+	if [ "$DEBUGMODE" -eq "1" ]; then
+		echo "Sending request to create new ELB with AWS now..."
+	fi
+
 	# Create new ELB from JSON
-	CreateLoadBalancer=$(aws elb create-load-balancer --cli-input-json "$json")
+	CreateLoadBalancer=$(aws elb create-load-balancer --cli-input-json "$json" 2>&1)
 	if ! echo "$CreateLoadBalancer" | grep -qw "DNSName"; then
 		fail "$CreateLoadBalancer"
 	else
@@ -342,7 +346,7 @@ if [ "$CreateNewELB" = "true" ]; then
 		# json1=$(cat output1.json)
 
 		# Register Instances with ELB
-		RegisterInstances=$(aws elb register-instances-with-load-balancer --cli-input-json "$json1")
+		RegisterInstances=$(aws elb register-instances-with-load-balancer --cli-input-json "$json1" 2>&1)
 		if ! echo "$RegisterInstances" | grep -qw "Instances"; then
 			fail "$RegisterInstances"
 		else
@@ -389,7 +393,7 @@ if [ "$CreateNewELB" = "true" ]; then
 
 
 		# Configure Healthcheck from JSON
-		ConfigureHealthCheck=$(aws elb configure-health-check --cli-input-json "$json2")
+		ConfigureHealthCheck=$(aws elb configure-health-check --cli-input-json "$json2" 2>&1)
 		if ! echo "$ConfigureHealthCheck" | grep -qw "HealthCheck"; then
 			fail "$ConfigureHealthCheck"
 		else
@@ -444,7 +448,7 @@ if [ "$CreateNewELB" = "true" ]; then
 
 
 		# Configure Attributes from JSON
-		ConfigureAttributes=$(aws elb modify-load-balancer-attributes --cli-input-json "$json3")
+		ConfigureAttributes=$(aws elb modify-load-balancer-attributes --cli-input-json "$json3" 2>&1)
 		if ! echo "$ConfigureAttributes" | grep -qw "LoadBalancerAttributes"; then
 			fail "$ConfigureAttributes"
 		else
