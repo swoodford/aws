@@ -1,11 +1,18 @@
 #!/bin/bash
-# Script to count total size of all data stored in all s3 buckets (IAM account must have permission to access all buckets)
+# Script to count total size of all data stored in all s3 buckets (IAM account must have permission to access all buckets) requires s3cmd
 
 # Verify s3cmd Credentials are setup
 if ! [ -f ~/.s3cfg ]; then
 	echo "Error: s3cmd config not found or not installed."
     exit 1
 fi
+
+# Functions
+
+# Check for command
+function check_command {
+  type -P $1 &>/dev/null || fail "Unable to find $1, please install it and run this script again."
+}
 
 # Convert bytes to human readable
 function bytestohr(){
@@ -23,6 +30,9 @@ function bytestohr(){
 
     echo $VAL$( echo $SLIST | cut -f$POWER -d, )
 }
+
+# Check required commands
+check_command "s3cmd"
 
 # List buckets
 S3CMDLS=$(s3cmd ls)
