@@ -18,7 +18,7 @@ if [[ $INSTALL =~ ^([yY][eE][sS]|[yY])$ ]]; then
 		sudo pip install awscli
 
 		aws configure
-		complete -C '/usr/local/aws/bin/aws_completer' aws
+		complete -C '/usr/local/bin/aws_completer' aws
 	}
 	echo "Completed."
 fi
