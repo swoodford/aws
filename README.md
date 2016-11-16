@@ -12,8 +12,9 @@ and jq: https://stedolan.github.io/jq/
 - **cloudfront-invalidation-status.sh** Checks Cloudfront Distributions for cache invalidation status to complete
 - **create-cloudwatch-alarms.sh** Create AWS CloudWatch alarms for EC2, RDS, Load Balancer environments
 - **ec2-create-snapshots.sh** Create a snapshot of each EC2 volume that is tagged with the backup flag
-- **ec2-export-elb-template.sh** Export an ELB to a JSON template file for version control, duplication or recreation
 - **ec2-delete-snapshots.sh** Deletes snapshots for each EC2 volume that is tagged with the backup flag and matches the specified date
+- **ec2-elb-export-template.sh** Export an ELB to a JSON template file for version control, duplication or recreation
+- **ec2-elb-upload-ssl-cert.sh** Upload an SSL Certificate to AWS for use in setting up an ELB
 - **ec2-import-network-acl.sh** Import CIDR IP list to AWS EC2 Classic ACL rules and deny access
 - **ec2-import-vpcsg-rules-cloudfront.sh** Create VPC Security Group with Cloudfront IP ranges
 - **ec2-import-vpcsg-rules.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified
@@ -22,7 +23,6 @@ and jq: https://stedolan.github.io/jq/
 - **ec2-update-vpcsg-rules-pingdom.sh** Update existing AWS VPC Security Groups with new IP rules to allow access to each Pingdom probe server IP at the port specified
 - **elastic-beanstalk-set-hostname-within-instance.sh** Set the hostname on Elastic Beanstalk servers from within the instance with their EB environment name and public IP address
 - **elastic-beanstalk-update-hostnames.sh** Updates the hostname on Elastic Beanstalk servers with their environment name and IP address
-- **elb-upload-ssl-cert.sh** Upload an SSL Certificate to AWS for use in setting up an ELB
 - **install-awscli.sh** Install and configure AWS CLI
 - **install-s3cmd.sh** Install and setup s3cmd from the GitHub Repo
 - **route53-export-zones.sh** Uses cli53 to export the zone file for each Hosted Zone domain in Route 53

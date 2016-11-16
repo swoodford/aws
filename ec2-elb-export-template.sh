@@ -36,7 +36,7 @@ fi
 # Check for AWS CLI profile argument passed into the script
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
 if [ $# -eq 0 ]; then
-	echo "Usage: ./ec2-export-elb-template.sh profile"
+	echo "Usage: ./ec2-elb-export-template.sh profile"
 	echo "Where profile is the AWS CLI profile name"
 	echo "Using default profile"
 	profile=default

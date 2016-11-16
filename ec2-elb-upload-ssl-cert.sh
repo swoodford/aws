@@ -18,7 +18,7 @@ if ! [ -z "$1" ]; then
 	profile="$1"
 else
 	echo "Note: You can pass in an AWS CLI profile name as an argument when running the script."
-	echo "Example: ./elb-upload-ssl-cert.sh profilename"
+	echo "Example: ./ec2-elb-upload-ssl-cert.sh profilename"
 	pause
 	echo
 fi
