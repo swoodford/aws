@@ -101,16 +101,20 @@ if [ "$CreateTemplateFile" = "true" ]; then
 		tput sgr0
 	fi
 
-	echo
-	HorizontalRule
-	echo "Creating Template File"
-	HorizontalRule
-	echo
+
 
 	DescribeLB=$(aws elb describe-load-balancers --load-balancer-names $ELBname --profile $profile 2>&1)
+	if echo $DescribeLB | grep -q "could not be found"; then
+		fail "$DescribeLB"
+	fi
 	if echo $DescribeLB | grep -q "error"; then
 		fail "$DescribeLB"
 	else
+		echo
+		HorizontalRule
+		echo "Creating Template File"
+		HorizontalRule
+		echo
 		echo "$DescribeLB" > "$TemplateFileName"1
 	fi
 
@@ -139,6 +143,21 @@ if [ "$CreateNewELB" = "true" ]; then
 	# Ensure Variables are set
 	if [ "$NewELBname" = "YOUR-NEW-ELB-NAME-HERE" ] || [ -z "$NewELBname" ]; then
 		fail "Must set variable for new ELB name!"
+	fi
+
+	# Check for an existing ELB with the same name as the new ELB
+	TestNewELB=$(aws elb describe-load-balancers --load-balancer-names $NewELBname --profile $profile 2>&1)
+	if echo "$TestNewELB" | grep -q "An error occurred"; then
+		echo
+	else
+		tput setaf 1
+		echo "An ELB Named $NewELBname Already Exists!"
+		read -r -p "Continue and update the existing ELB $NewELBname with configuration from ELB $ELBname? (y/n) " CONTINUE
+		if ! [[ $CONTINUE =~ ^([yY][eE][sS]|[yY])$ ]]; then
+			echo "Cancelled."
+			tput sgr0
+			exit 1
+		fi
 	fi
 
 	# Verify Template file exists
