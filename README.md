@@ -16,6 +16,7 @@ and jq: https://stedolan.github.io/jq/
 - **ec2-elb-export-template.sh** Export an ELB to a JSON template file for version control, duplication or recreation
 - **ec2-elb-upload-ssl-cert.sh** Upload an SSL Certificate to AWS for use in setting up an ELB
 - **ec2-import-network-acl.sh** Import CIDR IP list to AWS EC2 Classic ACL rules and deny access
+- **ec2-import-vpcsg-rules-cloudflare.sh** Create VPC Security Group with CloudFlare IP ranges
 - **ec2-import-vpcsg-rules-cloudfront.sh** Create VPC Security Group with Cloudfront IP ranges
 - **ec2-import-vpcsg-rules.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 - **ec2-import-vpcsg-rules-pingdom.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified, setup to import rules for Pingdom probe servers
