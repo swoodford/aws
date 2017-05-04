@@ -22,7 +22,7 @@ DEBUGMODE="0"
 # Functions
 
 function Pause(){
-	read -p "Press any key to continue..."
+	read -n 1 -s -p "Press any key to continue..."
 	echo
 }
 
