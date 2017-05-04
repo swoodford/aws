@@ -4,24 +4,7 @@
 
 DEBUGMODE=0
 
-# Verify AWS CLI Credentials are setup
-# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-if ! grep -q aws_access_key_id ~/.aws/config; then
-  if ! grep -q aws_access_key_id ~/.aws/credentials; then
-    echo "Error: AWS config not found or CLI not installed. Please run \"aws configure\"."
-    exit 1
-  fi
-fi
 
-# Test for optional variable passed as argument and set as AWS CLI profile name
-if ! [ -z "$1" ]; then
-	profile="$1"
-else
-	echo "Note: You can pass in an AWS CLI profile name as an argument when running the script."
-	echo "Example: ./ec2-elb-upload-ssl-cert.sh profilename"
-	pause
-	echo
-fi
 
 # Functions
 
@@ -106,6 +89,24 @@ function import(){
 		echo
 	fi
 }
+
+# Verify AWS CLI Credentials are setup
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
+if ! grep -q aws_access_key_id ~/.aws/credentials; then
+	if ! grep -q aws_access_key_id ~/.aws/config; then
+		fail "Error: AWS config not found or CLI not installed. Please run \"aws configure\"."
+	fi
+fi
+
+# Test for optional variable passed as argument and set as AWS CLI profile name
+if ! [ -z "$1" ]; then
+	profile="$1"
+else
+	echo "Note: You can pass in an AWS CLI profile name as an argument when running the script."
+	echo "Example: ./ec2-elb-upload-ssl-cert.sh profilename"
+	pause
+	echo
+fi
 
 check_command "aws"
 check_command "jq"

@@ -25,11 +25,10 @@ function pause(){
 
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-if ! [ -f ~/.aws/config ]; then
-  if ! [ -f ~/.aws/credentials ]; then
-    fail "Error: AWS config not found or CLI not installed."
-    exit 1
-  fi
+if ! grep -q aws_access_key_id ~/.aws/credentials; then
+	if ! grep -q aws_access_key_id ~/.aws/config; then
+		fail "Error: AWS config not found or CLI not installed. Please run \"aws configure\"."
+	fi
 fi
 
 check_command "cli53"
