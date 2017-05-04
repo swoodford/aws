@@ -29,6 +29,7 @@ and jq: https://stedolan.github.io/jq/
 - **route53-export-zones.sh** Uses cli53 to export the zone file for each Hosted Zone domain in Route 53
 - **s3-buckets-file-size.sh** Count total size of all data stored in all S3 buckets
 - **s3-create-iam-user.sh** Create the S3 IAM user, generate IAM keys, add to IAM group, generate user policy
+- **s3-fix-content-type-metadata.sh** Safely fix invalid content-type metadata on AWS S3 bucket website assets for some common filetypes
 - **s3-openbucketpolicy.sh** Set an S3 bucket policy to allow GetObject requests from any IP address
 - **s3-restrictbucketpolicy.sh** Set an S3 bucket policy to only allow GetObject requests from an IP whitelist file named iplist
 - **s3-setup-buckets.sh** Create S3 buckets, set CORS config and tag bucket with client name
