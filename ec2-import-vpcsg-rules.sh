@@ -22,7 +22,7 @@ fi
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 if ! grep -q aws_access_key_id ~/.aws/config; then
 	if ! grep -q aws_access_key_id ~/.aws/credentials; then
-		tput setaf 1; echo "Error: AWS config not found or CLI not installed. Please run \"aws configure\"." && tput sgr0
+		tput setaf 1; echo "AWS config not found or CLI not installed. Please run \"aws configure\"." && tput sgr0
 		exit 1
 	fi
 fi

@@ -7,7 +7,7 @@
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 if ! grep -q aws_access_key_id ~/.aws/config; then
   if ! grep -q aws_access_key_id ~/.aws/credentials; then
-    echo "Error: AWS config not found or CLI not installed. Please run \"aws configure\"."
+    echo "AWS config not found or CLI not installed. Please run \"aws configure\"."
     exit 1
   fi
 fi

@@ -94,7 +94,7 @@ function import(){
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 if ! grep -q aws_access_key_id ~/.aws/credentials; then
 	if ! grep -q aws_access_key_id ~/.aws/config; then
-		fail "Error: AWS config not found or CLI not installed. Please run \"aws configure\"."
+		fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
 	fi
 fi
 
