@@ -56,7 +56,7 @@ else
 fi
 
 
-function addRules (){
+function checkGroups (){
 	# Check for existing security group or create new one
 	if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q CloudFlare; then
 		echo
@@ -66,6 +66,8 @@ function addRules (){
 		echo $GROUPID
 		aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="CloudFlare") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1
 		echo "====================================================="
+
+		addRules
 	else
 		echo	 
 		echo "====================================================="
@@ -88,13 +90,22 @@ function addRules (){
 				echo $GROUPID
 				aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="CloudFlare") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1
 				echo "====================================================="
+
+				addRules
 			fi
 		else
-			echo "Exiting"
-			exit 1
+			read -r -p "Do you want to add additional IPs to the existing group? (y/n) " ADDGROUP
+			if [[ $ADDGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
+				addRules
+			else
+				echo "Exiting"
+				exit 1
+			fi
 		fi
 	fi
-	echo
+}
+
+function addRules (){
 	echo
 	echo "====================================================="
 	echo "Adding rules to VPC Security Group "$GROUPNAME
@@ -122,4 +133,4 @@ function addRules (){
 check_command "curl"
 check_command "jq"
 
-addRules
+checkGroups
