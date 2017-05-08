@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # This script sets an S3 bucket policy to allow GetObject requests from any IP.  Requires jq.
-# Usage: ./s3-openbucketpolicy.sh environment
 
 # Variables
 
@@ -69,7 +68,8 @@ function run {
 function setBucketName (){
 	# Check for environment argument passed into the script
 	if [ $# -eq 0 ]; then
-		echo "Usage: ./s3-openbucketpolicy.sh environment"
+		scriptname=`basename "$0"`
+		echo "Usage: ./$scriptname environment"
 		read -rp "S3 Bucket Environment? (dev/staging/prod/all): " s3bucketenv
 		if [ -z "$s3bucketenv" ]; then
 			fail "Invalid environment."

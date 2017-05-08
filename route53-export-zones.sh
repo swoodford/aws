@@ -36,7 +36,8 @@ check_command "cli53"
 
 # Check for profile argument passed into the script
 if [ $# -eq 0 ]; then
-	echo "Usage: ./route53-export-zones.sh profile"
+	scriptname=`basename "$0"`
+	echo "Usage: ./$scriptname profile"
 	echo "Where profile is the AWS CLI profile name"
 	echo "Using default profile"
 	profile=default
