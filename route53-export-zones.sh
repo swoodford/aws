@@ -74,7 +74,7 @@ fi
 # 		export AWS_ACCESS_KEY_ID=$(grep aws_access_key_id ~/.aws/credentials | cut -d ' ' -f3)
 # 		export AWS_SECRET_ACCESS_KEY=$(grep aws_secret_access_key ~/.aws/credentials | cut -d ' ' -f3)
 # 	else
-# 		echo "Error: AWS config not found or CLI not installed."
+# 		echo "AWS config not found or CLI not installed. Please run \"aws configure\"."
 # 		exit 1
 # 	fi
 

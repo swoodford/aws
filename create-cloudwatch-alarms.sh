@@ -4,19 +4,23 @@
 
 # ALARMACTION="arn:aws:sns:us-east-1:YOURACCOUNTNUMBER:YOURSNSALERTNAME"
 
+# Fail
+function fail(){
+  tput setaf 1; echo "Failure: $*" && tput sgr0
+  exit 1
+}
+
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 if ! [ -f ~/.aws/config ]; then
   if ! [ -f ~/.aws/credentials ]; then
-    echo "Error: AWS config not found or CLI not installed."
-    exit 1
+    fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
   fi
 fi
 
 # Verify ALARMACTION is setup with some alert mechanism
 if [[ -z $ALARMACTION ]]; then
-  echo "Error: ALARMACTION not configured."
-  exit 1
+  fail "ALARMACTION not configured."
 fi
 
 echo "================================================================="
@@ -27,8 +31,7 @@ echo
 echo -n "Client Name? "
 read CLIENT
 if [[ -z $CLIENT ]]; then
-  echo "Invalid Client Name!"
-  exit 1
+  fail "Invalid Client Name!"
 fi
 
 echo -n "How Many Servers Total? "
@@ -41,8 +44,7 @@ if [[ $SERVERNUM > 0 ]] && echo "$SERVERNUM" | egrep '^[0-9]+$' >/dev/null 2>&1;
     echo -n "Load Balancer ID? "
     read LBID
     if [[ -z $LBID ]]; then
-      echo "Invalid Load Balancer ID!"
-      exit 1
+      fail "Invalid Load Balancer ID!"
     fi
 
     # Load Balancer Unhealthy Host Check
@@ -64,8 +66,7 @@ if [[ $SERVERNUM > 0 ]] && echo "$SERVERNUM" | egrep '^[0-9]+$' >/dev/null 2>&1;
     echo -n "Server Environment? (Beta/Prod) "
     read ENVIRONMENT
     if [[ -z $ENVIRONMENT ]]; then
-      echo "Invalid Server Environment!"
-      exit 1
+      fail "Invalid Server Environment!"
     fi
     # Avoid "Beta Beta" situation
     if [[ $ENVIRONMENT == "Beta" ]]; then
@@ -91,8 +92,7 @@ if [[ $SERVERNUM > 0 ]] && echo "$SERVERNUM" | egrep '^[0-9]+$' >/dev/null 2>&1;
         echo "================================================================="
 
       else
-        echo "Invalid Instance ID!"
-        exit 1
+        fail "Invalid Instance ID!"
       fi
   done
 else
@@ -117,8 +117,7 @@ read -r -p "Setup Database Alarms? (y/n) " SETUPDB
         echo -n "Database Environment? (Beta/Prod) "
         read ENVIRONMENT
         if [[ -z $ENVIRONMENT ]]; then
-          echo "Invalid Database Environment!"
-          exit 1
+          fail "Invalid Database Environment!"
         fi
         # # Avoid "Beta Beta" situation
         # if [[ $ENVIRONMENT == "Beta" ]]; then
@@ -130,8 +129,7 @@ read -r -p "Setup Database Alarms? (y/n) " SETUPDB
         echo -n "DB Instance ID? "
         read DBID
         if [[ -z $DBID ]]; then
-          echo "Invalid Database Instance ID!"
-          exit 1
+          fail "Invalid Database Instance ID!"
         fi
 
         # Database CPU Check

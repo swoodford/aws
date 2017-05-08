@@ -23,10 +23,9 @@ function fail(){
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 if ! [ -f ~/.aws/config ]; then
-  if ! [ -f ~/.aws/credentials ]; then
-    fail "Error: AWS config not found or CLI not installed."
-    exit 1
-  fi
+	if ! [ -f ~/.aws/credentials ]; then
+		fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
+	fi
 fi
 
 # Check for Distributions
@@ -40,7 +39,6 @@ function distributionsCheck(){
 	fi
 	if echo "$distributions" | grep -q False; then
 		fail "No CloudFront distributions found."
-		exit 1
 	fi
 }
 
@@ -55,7 +53,6 @@ function listDistributions(){
 	fi
 	if [ -z "$distributions" ]; then
 		fail "No CloudFront distributions found."
-		exit 1
 	else
 		echo ===============================
 		echo Found CloudFront Distributions:
