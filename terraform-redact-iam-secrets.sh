@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
-# This script replaces AWS IAM Secret Keys and IAM SES SMTP Passwords with "REDACTED" in Terraform state files.
-# State files so they can be safely committed to git without exposing credentials.
+# This script replaces AWS IAM Secret Keys and IAM SES SMTP Passwords with "REDACTED"
+# in Terraform state files so they can be safely committed to git without exposing credentials.
+
+# Usage:
 # Run from dir that contains environment subfolders. Requires Terraform and jq.
 # Assumes three environments exist within subfolders: dev, staging, production.
+# Must have an output.tf file with iam_secret and ses_smtp_password defined.
+
 
 # Set Variables
 devEnv="dev"
