@@ -11,6 +11,7 @@ and jq: https://stedolan.github.io/jq/
 
 - **cloudfront-invalidation-status.sh** Checks Cloudfront Distributions for cache invalidation status to complete
 - **cloudwatch-create-alarms.sh** Create AWS CloudWatch alarms for EC2, RDS, Load Balancer environments
+- **convert-iplist-cidr-json-array.sh** Converts an IPv4 iplist to CIDR block notation and JSON array format, sorting and de-duplicating IPs
 - **ec2-classic-import-network-acl.sh** Import CIDR IP list to AWS EC2 Classic ACL rules and deny access
 - **ec2-ebs-create-snapshots.sh** Create a snapshot of each EC2 EBS volume that is tagged with the backup flag
 - **ec2-ebs-delete-snapshots.sh** Deletes snapshots for each EC2 EBS volume that is tagged with the backup flag and matches the specified date
