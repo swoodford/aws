@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-# This script will save a list of current Pingdom probe server IPs in the file pingdom-probe-servers.txt
+# This script will save a list of current Pingdom IPv4 probe server IPs in the file pingdom-probe-servers.txt
 # Then create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 # Due to AWS limits a group can only have 50 rules and will create multiple groups if greater than 50 rules
+# Supports up to 150 rules
 # Requires the AWS CLI, jq, wget, perl
 
 # Set Variables
@@ -13,7 +14,7 @@ PROTOCOL="tcp"
 PORT="443"
 
 # Debug Mode
-DEBUGMODE=0
+DEBUGMODE=1
 
 
 
@@ -46,14 +47,18 @@ if ! grep -q aws_access_key_id ~/.aws/credentials; then
 	fi
 fi
 
-# Test for optional variable passed as argument and set as AWS CLI profile name
-if ! [ -z "$1" ]; then
-	profile="$1"
-else
-	echo "Note: You can pass in an AWS CLI profile name as an argument when running the script."
-	echo "Example: ./ec2-import-vpcsg-rules-pingdom.sh profilename"
-	pause
+
+# Check for AWS CLI profile argument passed into the script
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
+if [ $# -eq 0 ]; then
+	scriptname=`basename "$0"`
+	echo "Usage: ./$scriptname profile"
+	echo "Where profile is the AWS CLI profile name"
+	echo "Using default profile"
 	echo
+	profile=default
+else
+	profile=$1
 fi
 
 
@@ -74,7 +79,8 @@ fi
 function probeIPs(){
 	wget --quiet -O- https://www.pingdom.com/rss/probe_servers.xml | \
 	perl -nle 'print $1 if /IP: (([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5]));/' | \
-	sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 > pingdom-probe-servers.txt
+	sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 | \
+	uniq > pingdom-probe-servers.txt
 
 	TOTALIPS=$(cat pingdom-probe-servers.txt | wc -l | tr -d ' ')
 	# TOTALIPS=$(cat pingdom-probe-servers.txt | wc -l | cut -d " " -f7)
@@ -90,116 +96,80 @@ function probeIPs(){
 # Create one group with 50 rules or less
 function addRules(){
 	# Check for existing security group or create new one
-	if [ -z "$profile" ]; then
-		if ! aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$GROUPNAME"; then
-			echo
-			echo "====================================================="
-			echo "Creating Security Group: "$GROUPNAME
-			SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID 2>&1)
-			echo "Security Group:" $SGID
-			echo "====================================================="
-			echo
-			echo
-			echo "====================================================="
-			echo "Adding rules to VPC Security Group: "$GROUPNAME
-			echo "Records to be created: "$TOTALIPS
-			echo "====================================================="
-			echo
-			while read iplist
-			do
-				aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" 2>&1
-				# aws ec2 authorize-security-group-ingress --group-name "$GROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
-			done < pingdom-probe-servers.txt
-			echo "====================================================="
-			echo
-			tput setaf 2; echo "Completed!" && tput sgr0
-			echo
-		else
-			echo
-			echo "====================================================="
-			echo "Group $GROUPNAME Already Exists"
-			GROUPID=$(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2)
-			echo "$GROUPID"
-			read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
-			if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
-				echo
-				echo "====================================================="
-				echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
-				echo "====================================================="
-				DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" 2>&1)
-				if echo $DELETEGROUP | grep -q error; then
-					fail "$DELETEGROUP"
-				else
-					echo
-					echo "====================================================="
-					echo "Creating Security Group "$GROUPNAME
-					GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID 2>&1)
-					echo $GROUPID
-					aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
-					echo "====================================================="
-				fi
-			else
-				echo "Exiting"
-				exit 1
-			fi
+	if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$GROUPNAME"; then
+		echo
+		echo "====================================================="
+		echo "Creating Security Group: "$GROUPNAME
+		SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
+		if echo $SGID | grep -q "error"; then
+			fail "$SGID"
 		fi
-	else
-		if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$GROUPNAME"; then
-			echo
-			echo "====================================================="
-			echo "Creating Security Group: "$GROUPNAME
-			SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1)
-			echo "Security Group:" $SGID
-			echo "====================================================="
-			echo
-			echo
-			echo "====================================================="
-			echo "Adding rules to VPC Security Group: "$GROUPNAME
-			echo "Records to be created: "$TOTALIPS
-			echo "====================================================="
-			echo
-			while read iplist
-			do
-				aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1
-				# aws ec2 authorize-security-group-ingress --group-name "$GROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
-			done < pingdom-probe-servers.txt
-			echo "====================================================="
-			echo
-			tput setaf 2; echo "Completed!" && tput sgr0
-			echo
-		else
-			echo
-			echo "====================================================="
-			echo "Group $GROUPNAME Already Exists"
-			GROUPID=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2)
-			echo "$GROUPID"
-			read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
-			if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
-				echo
-				echo "====================================================="
-				echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
-				echo "====================================================="
-				DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
-				if echo $DELETEGROUP | grep -q error; then
-					fail "$DELETEGROUP"
-				else
-					echo
-					echo "====================================================="
-					echo "Creating Security Group "$GROUPNAME
-					GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1)
-					echo $GROUPID
-					aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
-					echo "====================================================="
-				fi
-			else
-				echo "Exiting"
-				exit 1
+		echo "Security Group:" $SGID
+		TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME")
+		if echo $TAG | grep -q "error"; then
+			fail "$TAG"
+		fi
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
+		echo "====================================================="
+		echo
+		echo
+		echo "====================================================="
+		echo "Adding rules to VPC Security Group: "$GROUPNAME
+		echo "Rules to be created: "$TOTALIPS
+		echo "====================================================="
+		echo
+		while read iplist
+		do
+			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+			if echo $AUTHORIZE | grep -q "error"; then
+				fail "$AUTHORIZE"
 			fi
+			# aws ec2 authorize-security-group-ingress --group-name "$GROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+		done < pingdom-probe-servers.txt
+		echo "====================================================="
+		echo
+		tput setaf 2; echo "Completed!" && tput sgr0
+		echo
+	else
+		echo
+		echo "====================================================="
+		echo "Group $GROUPNAME Already Exists"
+		GROUPID=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2)
+		if echo $GROUPID | grep -q "error"; then
+			fail "$GROUPID"
+		fi
+		echo "$GROUPID"
+		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
+		if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
+			echo
+			echo "====================================================="
+			echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
+			echo "====================================================="
+			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
+			if echo $DELETEGROUP | grep -q "error"; then
+				fail "$DELETEGROUP"
+			fi
+			echo
+			echo "====================================================="
+			echo "Creating Security Group "$GROUPNAME
+			GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
+			if echo $GROUPID | grep -q "error"; then
+				fail "$GROUPID"
+			fi
+			echo $GROUPID
+			TAG=$(aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME")
+			if echo $TAG | grep -q "error"; then
+				fail "$TAG"
+			fi
+			echo "====================================================="
+		else
+			echo "Exiting"
+			exit 1
 		fi
 	fi
 }
 
-# Create multiple groups for more than 50 rules
+# Create multiple groups for 51-100 rules
 function addRules50(){
 	# Set Variables for Group #1
 	FIRSTGROUPNAME="$GROUPNAME 1"
@@ -212,159 +182,254 @@ function addRules50(){
 	fi
 	START=1
 
-	if [ -z "$profile" ]; then
-		if [[ $DEBUGMODE = "1" ]]; then
-			echo "No AWS CLI profile"
+	if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$FIRSTGROUPNAME"; then
+		echo
+		echo "====================================================="
+		echo "Creating Security Group: "$FIRSTGROUPNAME
+		SGID1=$(aws ec2 create-security-group --group-name "$FIRSTGROUPNAME" --description "$FIRSTDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+		if echo $SGID1 | grep -q "error"; then
+			fail "$SGID1"
 		fi
-		if ! aws ec2 describe-security-groups --output=json 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$FIRSTGROUPNAME"; then
-			if [[ $DEBUGMODE = "1" ]]; then
-				echo "$FIRSTGROUPNAME doesn't already exist"
+		echo "Security Group 1:" $SGID1
+		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME")
+		if echo $TAG | grep -q "error"; then
+			fail "$TAG"
+		fi
+		echo "====================================================="
+		echo
+		echo
+		echo "====================================================="
+		echo "Adding rules to VPC Security Group: "$FIRSTGROUPNAME
+		echo "Rules to be created: 50" #$TOTALIPS
+		echo "====================================================="
+		echo
+
+		# Begin loop to create rules 1-50
+		for (( COUNT=$START; COUNT<=50; COUNT++ ))
+		do
+			echo "Rule "\#$COUNT
+
+			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+			echo "IP="$iplist
+
+			# ADDRULE=$(aws ec2 authorize-security-group-ingress --group-name $FIRSTGROUPNAME --protocol $PROTOCOL --port $PORT --cidr "$IP/32")
+			# echo "Record created: "$ADDRULE
+
+			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID1" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+			if echo $AUTHORIZE | grep -q "error"; then
+				fail "$AUTHORIZE"
 			fi
-			echo
-			echo "====================================================="
-			echo "Creating Security Group: "$FIRSTGROUPNAME
-			SGID1=$(aws ec2 create-security-group --group-name "$FIRSTGROUPNAME" --description "$FIRSTDESCR" --vpc-id $VPCID 2>&1)
-			echo "Security Group 1:" $SGID1
-			echo "====================================================="
-			echo
-			echo
-			echo "====================================================="
-			echo "Adding rules to VPC Security Group: "$FIRSTGROUPNAME
-			echo "Records to be created: 50" #$TOTALIPS
-			echo "====================================================="
-			echo
+			# aws ec2 authorize-security-group-ingress --group-name "$FIRSTGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+		done
 
-			# Begin loop to create rules 1-50
-			for (( COUNT=$START; COUNT<=50; COUNT++ ))
-			do
-				echo "Rule "\#$COUNT
+		# Set Variables for Group #2
+		SECONDGROUPNAME="$GROUPNAME 2"
+		SECONDDESCR="$DESCRIPTION 51-$TOTALIPS"
+		START=51
 
-				iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-				echo "IP="$iplist
-
-				# ADDRULE=$(aws ec2 authorize-security-group-ingress --group-name $FIRSTGROUPNAME --protocol $PROTOCOL --port $PORT --cidr "$IP/32")
-				# echo "Record created: "$ADDRULE
-
-				aws ec2 authorize-security-group-ingress --group-id "$SGID1" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" 2>&1
-				# aws ec2 authorize-security-group-ingress --group-name "$FIRSTGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
-			done
-
-			# Set Variables for Group #2
-			SECONDGROUPNAME="$GROUPNAME 2"
-			SECONDDESCR="$DESCRIPTION 51-$TOTALIPS"
-			START=51
-
-			echo
-			echo "====================================================="
-			echo "Creating Security Group: "$SECONDGROUPNAME
-			SGID2=$(aws ec2 create-security-group --group-name "$SECONDGROUPNAME" --description "$SECONDDESCR" --vpc-id $VPCID 2>&1)
-			echo "Security Group 2:" $SGID2
-			echo "====================================================="
-			echo
-			echo
-			echo "====================================================="
-			echo "Adding rules to VPC Security Group: "$SECONDGROUPNAME
-			echo "Records to be created: "$(expr $TOTALIPS - 50)
-			echo "====================================================="
-			echo
-
-			# Begin loop to create rules 51-n
-			for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
-			do
-				echo "Rule "\#$COUNT
-
-				iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-				echo "IP="$iplist
-
-				aws ec2 authorize-security-group-ingress --group-id "$SGID2" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" 2>&1
-				# aws ec2 authorize-security-group-ingress --group-name "$SECONDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
-			done
-
-			echo "====================================================="
-			echo
-			tput setaf 2; echo "Completed!" && tput sgr0
-			echo
+		echo
+		echo "====================================================="
+		echo "Creating Security Group: "$SECONDGROUPNAME
+		SGID2=$(aws ec2 create-security-group --group-name "$SECONDGROUPNAME" --description "$SECONDDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+		if echo $SGID2 | grep -q "error"; then
+			fail "$SGID2"
 		fi
+		echo "Security Group 2:" $SGID2
+		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME")
+		if echo $TAG | grep -q "error"; then
+			fail "$TAG"
+		fi
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$SECONDGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$SECONDGROUPNAME"
+		echo "====================================================="
+		echo
+		echo
+		echo "====================================================="
+		echo "Adding rules to VPC Security Group: "$SECONDGROUPNAME
+		echo "Rules to be created: "$(expr $TOTALIPS - 50)
+		echo "====================================================="
+		echo
+
+		# Begin loop to create rules 51-n
+		for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
+		do
+			echo "Rule "\#$COUNT
+
+			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+			echo "IP="$iplist
+
+			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID2" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+			if echo $AUTHORIZE | grep -q "error"; then
+				fail "$AUTHORIZE"
+			fi
+			# aws ec2 authorize-security-group-ingress --group-name "$SECONDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+		done
+		echo "====================================================="
+		echo
+		tput setaf 2; echo "Completed!" && tput sgr0
+		echo
 	else
-		if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$FIRSTGROUPNAME"; then
-			echo
-			echo "====================================================="
-			echo "Creating Security Group: "$FIRSTGROUPNAME
-			SGID1=$(aws ec2 create-security-group --group-name "$FIRSTGROUPNAME" --description "$FIRSTDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
-			echo "Security Group 1:" $SGID1
-			echo "====================================================="
-			echo
-			echo
-			echo "====================================================="
-			echo "Adding rules to VPC Security Group: "$FIRSTGROUPNAME
-			echo "Records to be created: 50" #$TOTALIPS
-			echo "====================================================="
-			echo
-
-			# Begin loop to create rules 1-50
-			for (( COUNT=$START; COUNT<=50; COUNT++ ))
-			do
-				echo "Rule "\#$COUNT
-
-				iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-				echo "IP="$iplist
-
-				# ADDRULE=$(aws ec2 authorize-security-group-ingress --group-name $FIRSTGROUPNAME --protocol $PROTOCOL --port $PORT --cidr "$IP/32")
-				# echo "Record created: "$ADDRULE
-
-				aws ec2 authorize-security-group-ingress --group-id "$SGID1" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1
-				# aws ec2 authorize-security-group-ingress --group-name "$FIRSTGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
-			done
-
-			# Set Variables for Group #2
-			SECONDGROUPNAME="$GROUPNAME 2"
-			SECONDDESCR="$DESCRIPTION 51-$TOTALIPS"
-			START=51
-
-			echo
-			echo "====================================================="
-			echo "Creating Security Group: "$SECONDGROUPNAME
-			SGID2=$(aws ec2 create-security-group --group-name "$SECONDGROUPNAME" --description "$SECONDDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
-			echo "Security Group 2:" $SGID2
-			echo "====================================================="
-			echo
-			echo
-			echo "====================================================="
-			echo "Adding rules to VPC Security Group: "$SECONDGROUPNAME
-			echo "Records to be created: "$(expr $TOTALIPS - 50)
-			echo "====================================================="
-			echo
-
-			# Begin loop to create rules 51-n
-			for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
-			do
-				echo "Rule "\#$COUNT
-
-				iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-				echo "IP="$iplist
-
-				aws ec2 authorize-security-group-ingress --group-id "$SGID2" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1
-				# aws ec2 authorize-security-group-ingress --group-name "$SECONDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
-			done
-			echo "====================================================="
-			echo
-			tput setaf 2; echo "Completed!" && tput sgr0
-			echo
-		else
+		if [[ $DEBUGMODE = "1" ]]; then
 			aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep "$FIRSTGROUPNAME"
-			fail "Security Group already exists!"
 		fi
+		fail "Security Group already exists!"
+	fi
+}
+
+
+# Create multiple groups for 101-150 rules
+function addRules100(){
+	# Set Variables for Group #1
+	FIRSTGROUPNAME="$GROUPNAME 1"
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
+	fi
+	FIRSTDESCR="$DESCRIPTION 1-50"
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "FIRSTDESCR: "$FIRSTDESCR
+	fi
+	START=1
+
+	if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$FIRSTGROUPNAME"; then
+		echo
+		echo "====================================================="
+		echo "Creating Security Group: "$FIRSTGROUPNAME
+		SGID1=$(aws ec2 create-security-group --group-name "$FIRSTGROUPNAME" --description "$FIRSTDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+		if echo $SGID1 | grep -q "error"; then
+			fail "$SGID1"
+		fi
+		echo "Security Group 1:" $SGID1
+		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME")
+		if echo $TAG | grep -q "error"; then
+			fail "$TAG"
+		fi
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$FIRSTGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$FIRSTGROUPNAME"
+		echo "====================================================="
+		echo
+		echo
+		echo "====================================================="
+		echo "Adding rules to VPC Security Group: "$FIRSTGROUPNAME
+		echo "Rules to be created: 50" #$TOTALIPS
+		echo "====================================================="
+		echo
+
+		# Begin loop to create rules 1-50
+		for (( COUNT=$START; COUNT<=50; COUNT++ ))
+		do
+			echo "Rule "\#$COUNT
+
+			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+			echo "IP="$iplist
+
+			# ADDRULE=$(aws ec2 authorize-security-group-ingress --group-name $FIRSTGROUPNAME --protocol $PROTOCOL --port $PORT --cidr "$IP/32")
+			# echo "Record created: "$ADDRULE
+
+			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID1" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+			if echo $AUTHORIZE | grep -q "error"; then
+				fail "$AUTHORIZE"
+			fi
+			# aws ec2 authorize-security-group-ingress --group-name "$FIRSTGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+		done
+
+		# Set Variables for Group #2
+		SECONDGROUPNAME="$GROUPNAME 2"
+		SECONDDESCR="$DESCRIPTION 51-100"
+		START=51
+
+		echo
+		echo "====================================================="
+		echo "Creating Security Group: "$SECONDGROUPNAME
+		SGID2=$(aws ec2 create-security-group --group-name "$SECONDGROUPNAME" --description "$SECONDDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+		if echo $SGID2 | grep -q "error"; then
+			fail "$SGID2"
+		fi
+		echo "Security Group 2:" $SGID2
+		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME")
+		if echo $TAG | grep -q "error"; then
+			fail "$TAG"
+		fi
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$SECONDGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$SECONDGROUPNAME"
+		echo "====================================================="
+		echo
+		echo
+		echo "====================================================="
+		echo "Adding rules to VPC Security Group: "$SECONDGROUPNAME
+		echo "Rules to be created: 50"
+		echo "====================================================="
+		echo
+
+		# Begin loop to create rules 51-n
+		for (( COUNT=$START; COUNT<=100; COUNT++ ))
+		do
+			echo "Rule "\#$COUNT
+
+			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+			echo "IP="$iplist
+
+			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID2" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+			if echo $AUTHORIZE | grep -q "error"; then
+				fail "$AUTHORIZE"
+			fi
+			# aws ec2 authorize-security-group-ingress --group-name "$SECONDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+		done
+
+		# Set Variables for Group #3
+		THIRDGROUPNAME="$GROUPNAME 3"
+		THIRDDESCR="$DESCRIPTION 101-$TOTALIPS"
+		START=101
+
+		echo
+		echo "====================================================="
+		echo "Creating Security Group: "$THIRDGROUPNAME
+		SGID3=$(aws ec2 create-security-group --group-name "$THIRDGROUPNAME" --description "$THIRDDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+		if echo $SGID3 | grep -q "error"; then
+			fail "$SGID3"
+		fi
+		echo "Security Group 3:" $SGID3
+		TAG=$(aws ec2 create-tags --resources $SGID3 --tags Key=Name,Value="$THIRDGROUPNAME")
+		if echo $TAG | grep -q "error"; then
+			fail "$TAG"
+		fi
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$THIRDGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$THIRDGROUPNAME"
+		echo "====================================================="
+		echo
+		echo
+		echo "====================================================="
+		echo "Adding rules to VPC Security Group: "$THIRDGROUPNAME
+		echo "Rules to be created: "$(expr $TOTALIPS - 100)
+		echo "====================================================="
+		echo
+
+		# Begin loop to create rules 101-n
+		for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
+		do
+			echo "Rule "\#$COUNT
+
+			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+			echo "IP="$iplist
+
+			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID3" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+			if echo $AUTHORIZE | grep -q "error"; then
+				fail "$AUTHORIZE"
+			fi
+			# aws ec2 authorize-security-group-ingress --group-name "$THIRDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+		done
+
+		echo "====================================================="
+		echo
+		tput setaf 2; echo "Completed!" && tput sgr0
+		echo
+	else
+		if [[ $DEBUGMODE = "1" ]]; then
+			aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep "$FIRSTGROUPNAME"
+		fi
+		fail "Security Group already exists!"
 	fi
 }
 
 
 # Validate VPC ID
 function validateVPCID(){
-	if [ -z "$profile" ]; then
-		CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" 2>&1)
-	else
-		CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
-	fi
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
 
 	# Test for error
 	if ! echo "$CHECKVPC" | grep -qv "available"; then
@@ -405,17 +470,28 @@ probeIPs
 
 # Determine number of security groups needed since AWS limit is 50 rules per group
 
-# More than 100 rules
-if [ "$TOTALIPS" -gt "100" ]; then
-	fail "Greater than 100 IPs not yet supported."
-fi
-
 # Create one group with 50 rules or less
-if [ "$TOTALIPS" -lt "51" ]; then
-	addRules
+if [ "$TOTALIPS" -gt "0" ]; then
+	if [ "$TOTALIPS" -lt "51" ]; then
+		addRules
+	fi
 fi
 
-# Create multiple groups for more than 50 rules
+# Create multiple groups for 51-100 rules
 if [ "$TOTALIPS" -gt "50" ]; then
-	addRules50
+	if [ "$TOTALIPS" -lt "101" ]; then
+		addRules50
+	fi
+fi
+
+# Create multiple groups for 101-150 rules
+if [ "$TOTALIPS" -gt "100" ]; then
+	if [ "$TOTALIPS" -lt "151" ]; then
+		addRules100
+	fi
+fi
+
+# More than 150 rules not yet supported
+if [ "$TOTALIPS" -gt "150" ]; then
+	fail "Greater than 100 IPs not yet supported."
 fi
