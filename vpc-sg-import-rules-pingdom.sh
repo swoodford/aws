@@ -14,7 +14,7 @@ PROTOCOL="tcp"
 PORT="443"
 
 # Debug Mode
-DEBUGMODE=1
+DEBUGMODE=0
 
 
 
