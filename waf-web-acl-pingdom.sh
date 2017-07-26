@@ -520,6 +520,8 @@ function WAF(){
 				else
 					fail "Error adding IPs to IP Set."
 				fi
+			else
+				return
 			fi
 		fi
 	fi
@@ -578,7 +580,6 @@ check_command "perl"
 # Ensure Variables are set
 if [ "$CONDITIONNAME" = "YOUR-CONDITION-NAME-HERE" ]; then
 	fail "Must set variables!"
-	exit 1
 fi
 
 # TOTALIPS=$(wc -l iplist | cut -d " " -f7)
