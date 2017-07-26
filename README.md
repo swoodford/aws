@@ -22,7 +22,8 @@ and jq: https://stedolan.github.io/jq/
 - **install-awscli.sh** Install and configure AWS CLI
 - **install-s3cmd.sh** Install and setup s3cmd from the GitHub Repo
 - **route53-export-zones.sh** Uses cli53 to export the zone file for each Hosted Zone domain in Route 53
-- **s3-buckets-file-size.sh** Count total size of all data stored in all S3 buckets
+- **s3-buckets-file-size-s3api.sh** Count total size of all data stored in all S3 buckets using s3api (fastest)
+- **s3-buckets-file-size-s3cmd.sh** Count total size of all data stored in all S3 buckets using s3cmd tool (slower)
 - **s3-create-iam-user.sh** Create the S3 IAM user, generate IAM keys, add to IAM group, generate user policy
 - **s3-fix-content-type-metadata.sh** Safely fix invalid content-type metadata on AWS S3 bucket website assets for some common filetypes
 - **s3-openbucketpolicy.sh** Set an S3 bucket policy to allow GetObject requests from any IP address
