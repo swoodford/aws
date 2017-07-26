@@ -1,5 +1,6 @@
 #!/bin/bash
-# Script to count total size of all data stored in all s3 buckets (IAM account must have permission to access all buckets) requires s3cmd
+# Script to count total size of all data stored in all s3 buckets (IAM account must have permission to access all buckets)
+# Requires s3cmd
 
 # Verify s3cmd Credentials are setup
 if ! [ -f ~/.s3cfg ]; then
@@ -28,7 +29,7 @@ function bytestohr(){
         VINT=$( echo $VAL / 1024 | bc )
     done
 
-    echo $VAL$( echo $SLIST | cut -f$POWER -d, )
+    echo $VAL $( echo $SLIST | cut -f$POWER -d, )
 }
 
 # Check required commands
@@ -55,8 +56,7 @@ TOTALBUCKETSIZE=0
 
 for (( COUNT=$START; COUNT<=$TOTALNUMBERS3BUCKETS; COUNT++ ))
 do
-  CURRENTBUCKET=$(echo "$BUCKETNAMES" | grep -w $COUNT | cut -f 2)
-
+  CURRENTBUCKET=$(echo "$BUCKETNAMES" | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
   echo "====================================================="
   echo \#$COUNT $CURRENTBUCKET
 
