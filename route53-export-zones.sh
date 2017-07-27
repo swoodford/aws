@@ -17,10 +17,17 @@ function fail(){
 	exit 1
 }
 
-# Pause
-function pause(){
-	read -n 1 -s -p "Press any key to continue..."
+# Completed
+function completed(){
 	echo
+	HorizontalRule
+	tput setaf 2; echo "Completed!" && tput sgr0
+	HorizontalRule
+	echo
+}
+
+function HorizontalRule(){
+	echo "============================================================"
 }
 
 # Verify AWS CLI Credentials are setup
@@ -31,19 +38,20 @@ if ! grep -q aws_access_key_id ~/.aws/credentials; then
 	fi
 fi
 
-check_command "cli53"
-
-
-# Check for profile argument passed into the script
+# Check for AWS CLI profile argument passed into the script
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
 if [ $# -eq 0 ]; then
 	scriptname=`basename "$0"`
 	echo "Usage: ./$scriptname profile"
 	echo "Where profile is the AWS CLI profile name"
 	echo "Using default profile"
+	echo
 	profile=default
 else
 	profile=$1
 fi
+
+check_command "cli53"
 
 # # Test if cli53 already installed, else install it
 # command -v cli53 >/dev/null 2>&1 || {
@@ -51,16 +59,6 @@ fi
 # 	sudo pip install cli53
 # 	echo "cli53 installed."
 # }
-
-# Test for AWS Credentials
-# if [[ -z $AWS_ACCESS_KEY_ID ]]; then
-# 	echo "Error: AWS_ACCESS_KEY_ID not configured."
-# 	# exit 1
-# fi
-# if [[ -z $AWS_SECRET_ACCESS_KEY ]]; then
-# 	echo "Error: AWS_SECRET_ACCESS_KEY not configured."
-# 	# exit 1
-# fi
 
 # Test for ~/.boto file
 # if ! [ -f ~/.boto ]; then
@@ -91,11 +89,7 @@ fi
 # fi
 
 # Get list of Hosted Zones in Route 53
-if [ -z "$profile" ]; then
-	DOMAINLIST=$(aws route53 list-hosted-zones --output text | cut -f 4 | rev | cut -c 2- | rev | grep -v '^$')
-else
-	DOMAINLIST=$(aws route53 list-hosted-zones --output text --profile $profile | cut -f 4 | rev | cut -c 2- | rev | grep -v '^$')
-fi
+DOMAINLIST=$(aws route53 list-hosted-zones --output text --profile $profile | cut -f 4 | rev | cut -c 2- | rev | grep -v '^$')
 
 if [ -z "$DOMAINLIST" ]; then
 	fail "No hosted zones found in Route 53!"
@@ -104,14 +98,14 @@ fi
 # Count domains found
 TOTALDOMAINS=$(echo "$DOMAINLIST" | wc -l)
 
-echo " "
-echo "=============================================="
+echo
+HorizontalRule
 echo "Exporting Zone Files for Route 53 Hosted Zones"
 echo "Total number of Hosted Zones: "$TOTALDOMAINS
-echo "=============================================="
+HorizontalRule
 
 echo "$DOMAINLIST"
-echo " "
+echo
 
 if ! [ -d route53zones/$profile/ ]; then
 	mkdir -p route53zones/$profile
@@ -121,14 +115,10 @@ fi
 START=1
 for (( COUNT=$START; COUNT<=$TOTALDOMAINS; COUNT++ ))
 do
-	echo "========================================="
+	HorizontalRule
 	echo \#$COUNT
 	DOMAIN_ID=$(echo "$DOMAINLIST" | nl | grep -w $COUNT | cut -f 2)
-	if [ -z "$profile" ]; then
-		cli53 export --full $DOMAIN_ID > route53zones/$DOMAIN_ID.zone
-	else
-		cli53 export --full --profile $profile $DOMAIN_ID > route53zones/$profile/$DOMAIN_ID.zone
-	fi
+	cli53 export --full --profile $profile $DOMAIN_ID > route53zones/$profile/$DOMAIN_ID.zone
 	echo "Exported: "$DOMAIN_ID
 done
 
@@ -137,7 +127,4 @@ if [ -f route53zones/$profile/.zone ]; then
 	rm route53zones/$profile/.zone
 fi
 
-echo "========================================="
-echo " "
-echo "Completed!"
-echo " "
+completed
