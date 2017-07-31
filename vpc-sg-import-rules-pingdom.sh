@@ -120,7 +120,7 @@ function addRules(){
 			fail "$SGID"
 		fi
 		echo "Security Group:" $SGID
-		TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME")
+		TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
@@ -164,15 +164,16 @@ function addRules(){
 			echo
 			HorizontalRule
 			echo "Creating Security Group "$GROUPNAME
-			GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
-			if echo $GROUPID | grep -q "error"; then
-				fail "$GROUPID"
+			SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
+			if echo $SGID | grep -q "error"; then
+				fail "$SGID"
 			fi
-			echo $GROUPID
-			TAG=$(aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME")
+			echo "Security Group:" $SGID
+			TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
 			if echo $TAG | grep -q "error"; then
 				fail "$TAG"
 			fi
+			# TAG=$(aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME")
 			completed
 		else
 			echo "Exiting"
@@ -203,7 +204,7 @@ function addRules50(){
 			fail "$SGID1"
 		fi
 		echo "Security Group 1:" $SGID1
-		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME")
+		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
@@ -247,7 +248,7 @@ function addRules50(){
 			fail "$SGID2"
 		fi
 		echo "Security Group 2:" $SGID2
-		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME")
+		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
@@ -307,7 +308,7 @@ function addRules100(){
 			fail "$SGID1"
 		fi
 		echo "Security Group 1:" $SGID1
-		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME")
+		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
@@ -352,7 +353,7 @@ function addRules100(){
 			fail "$SGID2"
 		fi
 		echo "Security Group 2:" $SGID2
-		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME")
+		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
@@ -394,7 +395,7 @@ function addRules100(){
 			fail "$SGID3"
 		fi
 		echo "Security Group 3:" $SGID3
-		TAG=$(aws ec2 create-tags --resources $SGID3 --tags Key=Name,Value="$THIRDGROUPNAME")
+		TAG=$(aws ec2 create-tags --resources $SGID3 --tags Key=Name,Value="$THIRDGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
