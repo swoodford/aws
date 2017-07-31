@@ -99,12 +99,47 @@ function probeIPs(){
 	if ! [ "$TOTALIPS" -gt "0" ]; then
 		fail "Error getting Pingdom IPs."
 	fi
-
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "Total Pingdom IPs: "$TOTALIPS
-	fi
+	echo
+	HorizontalRule
+	echo "Total Pingdom IPs: "$TOTALIPS
+	HorizontalRule
+	echo
 }
 
+# Create Security Group
+function createGroup(){
+	echo
+	HorizontalRule
+	echo "Creating Security Group: "$GROUPNAME
+	SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+	if echo $SGID | grep -q "error"; then
+		fail "$SGID"
+	fi
+	echo "Security Group ID:" $SGID
+	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
+	if echo $TAG | grep -q "error"; then
+		fail "$TAG"
+	fi
+	HorizontalRule
+	echo
+}
+
+# Add Rules to Security Group
+function addRulesToGroup(){
+	echo
+	HorizontalRule
+	echo "Adding rules to VPC Security Group: "$GROUPNAME
+	echo "Rules to be created: "$TOTALIPS
+	HorizontalRule
+	echo
+	while read iplist
+	do
+		AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+		if echo $AUTHORIZE | grep -q "error"; then
+			fail "$AUTHORIZE"
+		fi
+	done < pingdom-probe-servers.txt
+}
 
 # Create AWS VPC Security Groups
 
@@ -112,41 +147,14 @@ function probeIPs(){
 function addRules(){
 	# Check for existing security group or create new one
 	if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$GROUPNAME"; then
-		echo
-		HorizontalRule
-		echo "Creating Security Group: "$GROUPNAME
-		SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
-		if echo $SGID | grep -q "error"; then
-			fail "$SGID"
-		fi
-		echo "Security Group:" $SGID
-		TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
-		if echo $TAG | grep -q "error"; then
-			fail "$TAG"
-		fi
-		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
-		HorizontalRule
-		echo
-		echo
-		HorizontalRule
-		echo "Adding rules to VPC Security Group: "$GROUPNAME
-		echo "Rules to be created: "$TOTALIPS
-		HorizontalRule
-		echo
-		while read iplist
-		do
-			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
-			if echo $AUTHORIZE | grep -q "error"; then
-				fail "$AUTHORIZE"
-			fi
-			# aws ec2 authorize-security-group-ingress --group-name "$GROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
-		done < pingdom-probe-servers.txt
+		createGroup
+		addRulesToGroup
 		completed
 	else
 		echo
 		HorizontalRule
 		echo "Group $GROUPNAME Already Exists"
-		GROUPID=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2)
+		GROUPID=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d \" -f2)
 		if echo $GROUPID | grep -q "error"; then
 			fail "$GROUPID"
 		fi
@@ -161,23 +169,11 @@ function addRules(){
 			if echo $DELETEGROUP | grep -q "error"; then
 				fail "$DELETEGROUP"
 			fi
-			echo
-			HorizontalRule
-			echo "Creating Security Group "$GROUPNAME
-			SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
-			if echo $SGID | grep -q "error"; then
-				fail "$SGID"
-			fi
-			echo "Security Group:" $SGID
-			TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
-			if echo $TAG | grep -q "error"; then
-				fail "$TAG"
-			fi
-			# TAG=$(aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME")
+			createGroup
+			addRulesToGroup
 			completed
 		else
-			echo "Exiting"
-			exit 1
+			fail "Exiting"
 		fi
 	fi
 }
@@ -252,7 +248,7 @@ function addRules50(){
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
-		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$SECONDGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$SECONDGROUPNAME"
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$SECONDGROUPNAME") | .GroupId' | cut -d \" -f2) --tags Key=Name,Value="$SECONDGROUPNAME"
 		HorizontalRule
 		echo
 		echo
@@ -312,7 +308,7 @@ function addRules100(){
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
-		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$FIRSTGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$FIRSTGROUPNAME"
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$FIRSTGROUPNAME") | .GroupId' | cut -d \" -f2) --tags Key=Name,Value="$FIRSTGROUPNAME"
 		HorizontalRule
 		echo
 		echo
@@ -357,7 +353,7 @@ function addRules100(){
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
-		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$SECONDGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$SECONDGROUPNAME"
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$SECONDGROUPNAME") | .GroupId' | cut -d \" -f2) --tags Key=Name,Value="$SECONDGROUPNAME"
 		HorizontalRule
 		echo
 		echo
@@ -399,7 +395,7 @@ function addRules100(){
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
 		fi
-		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$THIRDGROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$THIRDGROUPNAME"
+		# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$THIRDGROUPNAME") | .GroupId' | cut -d \" -f2) --tags Key=Name,Value="$THIRDGROUPNAME"
 		HorizontalRule
 		echo
 		echo
@@ -441,7 +437,7 @@ function validateVPCID(){
 
 		# If only one VPC, use that ID
 		if [ "$NUMVPCS" -eq "1" ]; then
-			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d '"' -f2)
+			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
 		else
 			read -r -p "Please specify VPC ID (ex. vpc-12345678): " VPCID
 		fi
@@ -472,9 +468,7 @@ echo "then create an AWS VPC Security Group with rules to allow access to each I
 echo
 tput setaf 1; echo "Please verify all settings before continuing..." && tput sgr0
 echo
-if ! [ -z "$profile" ]; then
-	echo "AWS CLI Profile Name: "$profile
-fi
+echo "AWS CLI Profile Name: "$profile
 echo "Group Name: "$GROUPNAME
 echo "Group Description: "$DESCRIPTION
 echo "VPC ID: "$VPCID
@@ -483,11 +477,10 @@ echo "Port: "$PORT
 echo
 pause
 
-
-
 probeIPs
 
-# Determine number of security groups needed since AWS limit is 50 rules per group
+# Determine number of security groups needed since default AWS limit is 50 rules per group
+# https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Appendix_Limits.html#vpc-limits-security-groups
 
 # Create one group with 50 rules or less
 if [ "$TOTALIPS" -gt "0" ]; then
@@ -512,5 +505,5 @@ fi
 
 # More than 150 rules not yet supported
 if [ "$TOTALIPS" -gt "150" ]; then
-	fail "Greater than 100 IPs not yet supported."
+	fail "Greater than 150 IPs not yet supported."
 fi
