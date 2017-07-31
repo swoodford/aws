@@ -11,12 +11,15 @@
 
 # Set Variables
 CONDITIONNAME="Pingdom"
+
+# Debug Mode
 DEBUGMODE="0"
 
 
 # Functions
 
-# Check for command
+
+# Check Command
 function check_command {
 	type -P $1 &>/dev/null || fail "Unable to find $1, please install it and run this script again."
 }
@@ -36,9 +39,11 @@ function fail(){
 	exit 1
 }
 
+# Horizontal Rule
 function HorizontalRule(){
 	echo "============================================================"
 }
+
 
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
