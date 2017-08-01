@@ -163,30 +163,28 @@ function group0(){
 		addRulesToGroup
 		completed
 	else
-		echo
-		HorizontalRule
-		echo "Group $GROUPNAME Already Exists"
-		GROUPID=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d \" -f2)
-		if echo $GROUPID | grep -q "error"; then
-			fail "$GROUPID"
-		fi
-		echo "$GROUPID"
-		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
-		if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
-			echo
-			HorizontalRule
-			echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
-			HorizontalRule
-			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
-			if echo $DELETEGROUP | grep -q "error"; then
-				fail "$DELETEGROUP"
-			fi
-			createGroup
-			addRulesToGroup
-			completed
-		else
-			fail "Exiting"
-		fi
+		fail "Group $GROUPNAME Already Exists."
+		# GROUPID=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d \" -f2)
+		# if echo $GROUPID | grep -q "error"; then
+		# 	fail "$GROUPID"
+		# fi
+
+		# read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
+		# if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
+		# 	echo
+		# 	HorizontalRule
+		# 	echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
+		# 	HorizontalRule
+		# 	DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
+		# 	if echo $DELETEGROUP | grep -q "error"; then
+		# 		fail "$DELETEGROUP"
+		# 	fi
+		# 	createGroup
+		# 	addRulesToGroup
+		# 	completed
+		# else
+		# 	fail "Exiting"
+		# fi
 	fi
 }
 
@@ -267,10 +265,7 @@ function group50(){
 		done
 		completed
 	else
-		if [[ $DEBUGMODE = "1" ]]; then
-			aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep "$FIRSTGROUPNAME"
-		fi
-		fail "Security Group already exists!"
+		fail "Group $GROUPNAME Already Exists."
 	fi
 }
 
@@ -387,10 +382,7 @@ function group100(){
 		done
 		completed
 	else
-		if [[ $DEBUGMODE = "1" ]]; then
-			aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep "$FIRSTGROUPNAME"
-		fi
-		fail "Security Group already exists!"
+		fail "Group $GROUPNAME Already Exists."
 	fi
 }
 
