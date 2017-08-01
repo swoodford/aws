@@ -73,21 +73,8 @@ else
 	profile=$1
 fi
 
-
-# Create list of the IPs of all Pingdom probe servers
-# https://help.pingdom.com/hc/en-us/articles/203682601-How-to-get-all-Pingdom-probes-public-IP-addresses
-
-# IPV4 AND IPV6
-# function probeIPs(){
-# 	wget --quiet -O- https://my.pingdom.com/probes/feed | \
-# 	grep "pingdom:ip" | \
-# 	sed -e 's|</.*||' -e 's|.*>||' | \
-# 	sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 > pingdom-probe-servers.txt
-
-# 	TOTALIPS=$(cat pingdom-probe-servers.txt | wc -l | cut -d " " -f6)
-# }
-
 # Get Pingdom IPv4 IPs
+# https://help.pingdom.com/hc/en-us/articles/203682601-How-to-get-all-Pingdom-probes-public-IP-addresses
 function probeIPs(){
 	wget --quiet -O- https://www.pingdom.com/rss/probe_servers.xml | \
 	perl -nle 'print $1 if /IP: (([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5]));/' | \
@@ -97,7 +84,7 @@ function probeIPs(){
 	TOTALIPS=$(cat pingdom-probe-servers.txt | wc -l | tr -d ' ')
 
 	if ! [ "$TOTALIPS" -gt "0" ]; then
-		fail "Error getting Pingdom IPs."
+		fail "Unable to lookup Pingdom IPs."
 	fi
 	echo
 	HorizontalRule
@@ -126,25 +113,6 @@ function createGroup(){
 
 # Add Rules to Security Group
 function addRulesToGroup(){
-	echo
-	HorizontalRule
-	echo "Adding rules to VPC Security Group: "$GROUPNAME
-	echo "Rules to be created: "$TOTALIPS
-	HorizontalRule
-	echo
-	while read iplist
-	do
-		echo "Rule "\#$COUNT
-		echo "IP="$iplist
-		AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
-		if echo $AUTHORIZE | grep -q "error"; then
-			fail "$AUTHORIZE"
-		fi
-	done < pingdom-probe-servers.txt
-}
-
-# Add Rules to Security Group (Inside Loop)
-function addRulesToGroupLoop(){
 	echo "Rule "\#$COUNT
 	echo "IP="$iplist
 	AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
@@ -160,7 +128,19 @@ function group0(){
 	# Check for existing security group or create new one
 	if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$GROUPNAME"; then
 		createGroup
-		addRulesToGroup
+		echo
+		HorizontalRule
+		echo "Adding rules to Security Group: "$GROUPNAME
+		echo "Rules to be created: "$TOTALIPS
+		HorizontalRule
+		echo
+		# Begin loop to create rules
+		START=1
+		for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
+		do
+			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+			addRulesToGroup
+		done
 		completed
 	else
 		fail "Group $GROUPNAME Already Exists."
@@ -209,7 +189,7 @@ function group50(){
 		if echo $SGID1 | grep -q "error"; then
 			fail "$SGID1"
 		fi
-		echo "Security Group 1:" $SGID1
+		echo "Security Group ID:" $SGID1
 		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
@@ -218,7 +198,7 @@ function group50(){
 		echo
 		echo
 		HorizontalRule
-		echo "Adding rules to VPC Security Group: "$FIRSTGROUPNAME
+		echo "Adding rules to Security Group: "$FIRSTGROUPNAME
 		echo "Rules to be created: 50" #$TOTALIPS
 		HorizontalRule
 		echo
@@ -227,7 +207,7 @@ function group50(){
 		for (( COUNT=$START; COUNT<=50; COUNT++ ))
 		do
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			addRulesToGroupLoop
+			addRulesToGroup
 		done
 
 		# Set Variables for Group #2
@@ -242,7 +222,7 @@ function group50(){
 		if echo $SGID2 | grep -q "error"; then
 			fail "$SGID2"
 		fi
-		echo "Security Group 2:" $SGID2
+		echo "Security Group ID:" $SGID2
 		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
@@ -252,7 +232,7 @@ function group50(){
 		echo
 		echo
 		HorizontalRule
-		echo "Adding rules to VPC Security Group: "$SECONDGROUPNAME
+		echo "Adding rules to Security Group: "$SECONDGROUPNAME
 		echo "Rules to be created: "$(expr $TOTALIPS - 50)
 		HorizontalRule
 		echo
@@ -261,7 +241,7 @@ function group50(){
 		for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
 		do
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			addRulesToGroupLoop
+			addRulesToGroup
 		done
 		completed
 	else
@@ -291,7 +271,7 @@ function group100(){
 		if echo $SGID1 | grep -q "error"; then
 			fail "$SGID1"
 		fi
-		echo "Security Group 1:" $SGID1
+		echo "Security Group ID:" $SGID1
 		TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
@@ -301,7 +281,7 @@ function group100(){
 		echo
 		echo
 		HorizontalRule
-		echo "Adding rules to VPC Security Group: "$FIRSTGROUPNAME
+		echo "Adding rules to Security Group: "$FIRSTGROUPNAME
 		echo "Rules to be created: 50" #$TOTALIPS
 		HorizontalRule
 		echo
@@ -310,7 +290,7 @@ function group100(){
 		for (( COUNT=$START; COUNT<=50; COUNT++ ))
 		do
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			addRulesToGroupLoop
+			addRulesToGroup
 		done
 
 		# Set Variables for Group #2
@@ -325,7 +305,7 @@ function group100(){
 		if echo $SGID2 | grep -q "error"; then
 			fail "$SGID2"
 		fi
-		echo "Security Group 2:" $SGID2
+		echo "Security Group ID:" $SGID2
 		TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
@@ -335,7 +315,7 @@ function group100(){
 		echo
 		echo
 		HorizontalRule
-		echo "Adding rules to VPC Security Group: "$SECONDGROUPNAME
+		echo "Adding rules to Security Group: "$SECONDGROUPNAME
 		echo "Rules to be created: 50"
 		HorizontalRule
 		echo
@@ -344,7 +324,7 @@ function group100(){
 		for (( COUNT=$START; COUNT<=100; COUNT++ ))
 		do
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			addRulesToGroupLoop
+			addRulesToGroup
 		done
 
 		# Set Variables for Group #3
@@ -359,7 +339,7 @@ function group100(){
 		if echo $SGID3 | grep -q "error"; then
 			fail "$SGID3"
 		fi
-		echo "Security Group 3:" $SGID3
+		echo "Security Group ID:" $SGID3
 		TAG=$(aws ec2 create-tags --resources $SGID3 --tags Key=Name,Value="$THIRDGROUPNAME" --profile $profile 2>&1)
 		if echo $TAG | grep -q "error"; then
 			fail "$TAG"
@@ -369,7 +349,7 @@ function group100(){
 		echo
 		echo
 		HorizontalRule
-		echo "Adding rules to VPC Security Group: "$THIRDGROUPNAME
+		echo "Adding rules to Security Group: "$THIRDGROUPNAME
 		echo "Rules to be created: "$(expr $TOTALIPS - 100)
 		HorizontalRule
 		echo
@@ -378,7 +358,7 @@ function group100(){
 		for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
 		do
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			addRulesToGroupLoop
+			addRulesToGroup
 		done
 		completed
 	else
