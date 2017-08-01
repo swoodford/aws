@@ -134,6 +134,8 @@ function addRulesToGroup(){
 	echo
 	while read iplist
 	do
+		echo "Rule "\#$COUNT
+		echo "IP="$iplist
 		AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
 		if echo $AUTHORIZE | grep -q "error"; then
 			fail "$AUTHORIZE"
@@ -141,10 +143,20 @@ function addRulesToGroup(){
 	done < pingdom-probe-servers.txt
 }
 
+# Add Rules to Security Group (Inside Loop)
+function addRulesToGroupLoop(){
+	echo "Rule "\#$COUNT
+	echo "IP="$iplist
+	AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+	if echo $AUTHORIZE | grep -q "error"; then
+		fail "$AUTHORIZE"
+	fi
+}
+
 # Create AWS VPC Security Groups
 
 # Create one group with 50 rules or less
-function addRules(){
+function group0(){
 	# Check for existing security group or create new one
 	if ! aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | grep -q "$GROUPNAME"; then
 		createGroup
@@ -179,7 +191,7 @@ function addRules(){
 }
 
 # Create multiple groups for 51-100 rules
-function addRules50(){
+function group50(){
 	# Set Variables for Group #1
 	FIRSTGROUPNAME="$GROUPNAME 1"
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -212,23 +224,12 @@ function addRules50(){
 		echo "Rules to be created: 50" #$TOTALIPS
 		HorizontalRule
 		echo
-
+		SGID=$SGID1
 		# Begin loop to create rules 1-50
 		for (( COUNT=$START; COUNT<=50; COUNT++ ))
 		do
-			echo "Rule "\#$COUNT
-
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			echo "IP="$iplist
-
-			# ADDRULE=$(aws ec2 authorize-security-group-ingress --group-name $FIRSTGROUPNAME --protocol $PROTOCOL --port $PORT --cidr "$IP/32")
-			# echo "Record created: "$ADDRULE
-
-			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID1" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
-			if echo $AUTHORIZE | grep -q "error"; then
-				fail "$AUTHORIZE"
-			fi
-			# aws ec2 authorize-security-group-ingress --group-name "$FIRSTGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+			addRulesToGroupLoop
 		done
 
 		# Set Variables for Group #2
@@ -257,20 +258,12 @@ function addRules50(){
 		echo "Rules to be created: "$(expr $TOTALIPS - 50)
 		HorizontalRule
 		echo
-
+		SGID=$SGID2
 		# Begin loop to create rules 51-n
 		for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
 		do
-			echo "Rule "\#$COUNT
-
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			echo "IP="$iplist
-
-			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID2" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
-			if echo $AUTHORIZE | grep -q "error"; then
-				fail "$AUTHORIZE"
-			fi
-			# aws ec2 authorize-security-group-ingress --group-name "$SECONDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+			addRulesToGroupLoop
 		done
 		completed
 	else
@@ -283,7 +276,7 @@ function addRules50(){
 
 
 # Create multiple groups for 101-150 rules
-function addRules100(){
+function group100(){
 	# Set Variables for Group #1
 	FIRSTGROUPNAME="$GROUPNAME 1"
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -317,23 +310,12 @@ function addRules100(){
 		echo "Rules to be created: 50" #$TOTALIPS
 		HorizontalRule
 		echo
-
+		SGID=$SGID1
 		# Begin loop to create rules 1-50
 		for (( COUNT=$START; COUNT<=50; COUNT++ ))
 		do
-			echo "Rule "\#$COUNT
-
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			echo "IP="$iplist
-
-			# ADDRULE=$(aws ec2 authorize-security-group-ingress --group-name $FIRSTGROUPNAME --protocol $PROTOCOL --port $PORT --cidr "$IP/32")
-			# echo "Record created: "$ADDRULE
-
-			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID1" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
-			if echo $AUTHORIZE | grep -q "error"; then
-				fail "$AUTHORIZE"
-			fi
-			# aws ec2 authorize-security-group-ingress --group-name "$FIRSTGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+			addRulesToGroupLoop
 		done
 
 		# Set Variables for Group #2
@@ -362,20 +344,12 @@ function addRules100(){
 		echo "Rules to be created: 50"
 		HorizontalRule
 		echo
-
-		# Begin loop to create rules 51-n
+		SGID=$SGID2
+		# Begin loop to create rules 51-100
 		for (( COUNT=$START; COUNT<=100; COUNT++ ))
 		do
-			echo "Rule "\#$COUNT
-
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			echo "IP="$iplist
-
-			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID2" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
-			if echo $AUTHORIZE | grep -q "error"; then
-				fail "$AUTHORIZE"
-			fi
-			# aws ec2 authorize-security-group-ingress --group-name "$SECONDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+			addRulesToGroupLoop
 		done
 
 		# Set Variables for Group #3
@@ -404,20 +378,12 @@ function addRules100(){
 		echo "Rules to be created: "$(expr $TOTALIPS - 100)
 		HorizontalRule
 		echo
-
+		SGID=$SGID3
 		# Begin loop to create rules 101-n
 		for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
 		do
-			echo "Rule "\#$COUNT
-
 			iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-			echo "IP="$iplist
-
-			AUTHORIZE=$(aws ec2 authorize-security-group-ingress --group-id "$SGID3" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
-			if echo $AUTHORIZE | grep -q "error"; then
-				fail "$AUTHORIZE"
-			fi
-			# aws ec2 authorize-security-group-ingress --group-name "$THIRDGROUPNAME" --protocol $PROTOCOL --port $PORT --cidr "$iplist/32"
+			addRulesToGroupLoop
 		done
 		completed
 	else
@@ -485,21 +451,21 @@ probeIPs
 # Create one group with 50 rules or less
 if [ "$TOTALIPS" -gt "0" ]; then
 	if [ "$TOTALIPS" -lt "51" ]; then
-		addRules
+		group0
 	fi
 fi
 
 # Create multiple groups for 51-100 rules
 if [ "$TOTALIPS" -gt "50" ]; then
 	if [ "$TOTALIPS" -lt "101" ]; then
-		addRules50
+		group50
 	fi
 fi
 
 # Create multiple groups for 101-150 rules
 if [ "$TOTALIPS" -gt "100" ]; then
 	if [ "$TOTALIPS" -lt "151" ]; then
-		addRules100
+		group100
 	fi
 fi
 
