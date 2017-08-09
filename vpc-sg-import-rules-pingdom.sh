@@ -643,9 +643,9 @@ function validateVPCID(){
 
 # Confirm the group with this name does not already exist in the VPC
 function validateGroupName(){
-	validateGroupName=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
+	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
 	if echo "$validateGroupName" | egrep -q "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
-		fail Security group $(echo "$validateGroupName" | egrep "\b$GROUPNAME\b|\b$GROUPNAME 1\b") already exists in specified VPC.
+		echo Warning: Security Group $(echo "$validateGroupName" | egrep "\b$GROUPNAME\b|\b$GROUPNAME 1\b") already exists in specified VPC.
 	fi
 }
 
