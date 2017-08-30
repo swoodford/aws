@@ -31,6 +31,7 @@ and jq: https://stedolan.github.io/jq/
 - **s3-restrictbucketpolicy.sh** Set an S3 bucket policy to only allow GetObject requests from an IP whitelist file named iplist
 - **s3-setup-buckets.sh** Create S3 buckets, set CORS config and tag bucket with client name
 - **terraform-redact-iam-secrets.sh** Replaces AWS IAM Secret Keys and IAM SES SMTP Passwords with "REDACTED" in Terraform state files
+- **vpc-eni-monitor.sh** Generate an HTML page to monitor the number of AWS VPC Elastic Network Interfaces currently in use and upload it to an S3 bucket website
 - **vpc-sg-import-rules.sh** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 - **vpc-sg-import-rules-cloudflare.sh** Create VPC Security Group with Cloudflare IP ranges
 - **vpc-sg-import-rules-cloudfront.sh** Create VPC Security Group with CloudFront IP ranges
