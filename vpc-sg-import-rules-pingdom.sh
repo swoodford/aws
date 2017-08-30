@@ -621,13 +621,28 @@ function validateVPCID(){
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
 		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		if echo $DESCRIBEVPCS | egrep -q "Error|error|not"; then
+			fail "$DESCRIBEVPCS"
+		fi
 		NUMVPCS=$(echo $DESCRIBEVPCS | jq '.Vpcs | length')
+		if echo $NUMVPCS | egrep -q "Error|error|not|invalid"; then
+			fail "$NUMVPCS"
+		fi
 
 		# If only one VPC, use that ID
 		if [ "$NUMVPCS" -eq "1" ]; then
 			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
 		else
+			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1 | jq '.Vpcs | .[] | .VpcId')
+			if echo $FOUNDVPCS | egrep -q "Error|error|not|invalid"; then
+				fail "$FOUNDVPCS"
+			fi
+			echo "Found VPCs:" $FOUNDVPCS
+			echo
 			read -r -p "Please specify VPC ID (ex. vpc-12345678): " VPCID
+			if [ -z "$VPCID" ]; then
+				fail "Must specify a valid VPC ID."
+			fi
 		fi
 	fi
 
