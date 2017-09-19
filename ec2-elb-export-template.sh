@@ -132,7 +132,7 @@ if [ "$CreateTemplateFile" = "true" ]; then
 	# Verify Template file created
 	if ! [ -f $TemplateFileName ]; then
 		fail "Unable to create template file:" $TemplateFileName
-	else 
+	else
 		echo $TemplateFileName
 	fi
 	Completed
