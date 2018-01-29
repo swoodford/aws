@@ -1,11 +1,10 @@
-<h1 align="center">![aws](/images/aws.png)</h1>
+<h1 align="center"><img src="/images/aws.png" alt="AWS" width=130 height=130></h1>
 
 [![Build Status](https://travis-ci.org/swoodford/aws.svg?branch=master)](https://travis-ci.org/swoodford/aws)
 
 #### [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
 
-<h2 align="center">A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/) using the [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://stedolan.github.io/jq/).</h2>
-
+<h2 align="center">A collection of bash shell scripts for automating various tasks with <a href="https://aws.amazon.com/" target="_blank">Amazon Web Services</a> using the <a href="https://aws.amazon.com/cli/" target="_blank">AWS CLI</a> and <a href="https://stedolan.github.io/jq/" target="_blank">jq</a>.</h2>
 
 **What Is the AWS Command Line Interface?**
 
