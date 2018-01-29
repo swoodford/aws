@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
-# This script checks Cloudfront Distributions for cache invalidation status
-# Requires jq
 
-# If you use an AWS CLI profile set it here:
-# profile=profilename
+# This script monitors CloudFront distributions for cache invalidation status and alerts when it has completed
+# Requires the AWS CLI and jq
+
+# Debug Mode
+DEBUGMODE="0"
 
 
 # Functions
 
-
-# Check required commands
+# Check Command
 function check_command {
 	type -P $1 &>/dev/null || fail "Unable to find $1, please install it and run this script again."
+}
+
+# Completed
+function completed(){
+	echo
+	HorizontalRule
+	tput setaf 2; echo "Completed!" && tput sgr0
+	HorizontalRule
+	echo
 }
 
 # Fail
@@ -20,95 +29,134 @@ function fail(){
 	exit 1
 }
 
+# Horizontal Rule
+function HorizontalRule(){
+	echo "============================================================"
+}
+
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-if ! [ -f ~/.aws/config ]; then
-	if ! [ -f ~/.aws/credentials ]; then
+if ! grep -q aws_access_key_id ~/.aws/config; then
+	if ! grep -q aws_access_key_id ~/.aws/credentials; then
 		fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
 	fi
 fi
 
+# Check for AWS CLI profile argument passed into the script
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
+if [ $# -eq 0 ]; then
+	scriptname=`basename "$0"`
+	echo "Usage: ./$scriptname profile"
+	echo "Where profile is the AWS CLI profile name"
+	echo "Using default profile"
+	echo
+	profile=default
+else
+	profile=$1
+fi
+
 # Check for Distributions
 function distributionsCheck(){
-	if [ -z "$profile" ]; then
-		distributions=$(aws cloudfront list-distributions)
-		# echo "$distributions"
-	else
-		distributions=$(aws cloudfront list-distributions --profile $profile)
-		# echo "$distributions"
+	distributions=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | .ARN')
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "$distributions"
 	fi
-	if echo "$distributions" | grep -q False; then
+	if echo "$distributions" | egrep -iq "error|not|false"; then
+		echo "$distributions"
 		fail "No CloudFront distributions found."
 	fi
 }
 
 # List Distributions
 function listDistributions(){
-	if [ -z "$profile" ]; then
-		distributions=$(aws cloudfront list-distributions | jq '.DistributionList | .Items | .[] | .Id' | cut -d '"' -f2)
-		names=$(aws cloudfront list-distributions | jq '.DistributionList | .Items | .[] | .Origins | .Items | .[] | .Id' | cut -d '"' -f2)
-	else
-		distributions=$(aws cloudfront list-distributions --profile $profile | jq '.DistributionList | .Items | .[] | .Id' | cut -d '"' -f2)
-		names=$(aws cloudfront list-distributions --profile $profile | jq '.DistributionList | .Items | .[] | .Origins | .Items | .[] | .Id' | cut -d '"' -f2)
-	fi
+	distributions=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | .Id' | cut -d \" -f2)
+	names=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | .Origins | .Items | .[] | .Id' | cut -d \" -f2)
+
 	if [ -z "$distributions" ]; then
+		echo "$distributions"
 		fail "No CloudFront distributions found."
 	else
-		echo ===============================
+		HorizontalRule
 		echo Found CloudFront Distributions:
-		# echo "$distributions"
+		HorizontalRule
+
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "Debug distribution IDs:"
+			echo "$distributions"
+		fi
 		echo "$names"
-		echo ===============================
+		echo
+	fi
+	TOTALDISTRIBUTIONS=$(echo "$distributions" | wc -l | rev | cut -d " " -f1 | rev)
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "$TOTALDISTRIBUTIONS"
 	fi
 }
 
 # List Invalidations
 function listInvalidations(){
-	while IFS= read -r distributionid
+	# while IFS= read -r distributionid
+	# do
+	HorizontalRule
+	echo "Checking for Invalidations In Progress..."
+	HorizontalRule
+
+	START=1
+	for (( COUNT=$START; COUNT<=$TOTALDISTRIBUTIONS; COUNT++ ))
 	do
-		# echo Distribution ID: "$distributionid"
-		if [ -z "$profile" ]; then
-			invalidations=$(aws cloudfront list-invalidations --distribution-id $distributionid | jq '.InvalidationList | .Items | .[] | select(.Status != "Completed") | .Id' | cut -d '"' -f2)
-		else
-			invalidations=$(aws cloudfront list-invalidations --distribution-id $distributionid --profile $profile | jq '.InvalidationList | .Items | .[] | select(.Status != "Completed") | .Id' | cut -d '"' -f2)
+		distributionid=$(echo "$distributions" | nl | grep -w [^0-9][[:space:]]$COUNT | cut -f2)
+
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "Debug distribution ID: $distributionid"
 		fi
-		if [ -z "$invalidations" ]; then
-			return 1
-			# echo No CloudFront Invalidations In Progress.
-			# echo ========================================
-		else
-			echo ===============================
-			echo Invalidations not Completed:
-			echo "$invalidations"
-			echo ===============================
+		invalidations=$(aws cloudfront list-invalidations --distribution-id $distributionid --profile $profile 2>&1 | jq '.InvalidationList | .Items | .[] | select(.Status != "Completed") | .Id' | cut -d \" -f2)
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo invalidations "$invalidations"
 		fi
-	done <<< "$distributions"
+
+		if ! [ -z "$invalidations" ]; then
+			HorizontalRule
+			echo "Invalidation in progress: $invalidations"
+			HorizontalRule
+		fi
+	done
+
+	# done <<< "$distributions"
 }
 
 # Check the Invalidation Status
 function checkInvalidationstatus(){
 	if [ -z "$invalidations" ]; then
 		echo No CloudFront Invalidations In Progress.
-		echo ========================================
+		HorizontalRule
 		return 1
 	else
 		while IFS= read -r invalidationid
 		do
 			echo Invalidation ID: $invalidationid
-			if [ -z "$profile" ]; then
-			invalidationStatus=$(aws cloudfront get-invalidation --distribution-id $distributionid --id $invalidationid | jq '.Invalidation | .Status' | cut -d '"' -f2)
-			else
-				invalidationStatus=$(aws cloudfront get-invalidation --distribution-id $distributionid --id $invalidationid --profile $profile | jq '.Invalidation | .Status' | cut -d '"' -f2)
-			fi
+			invalidationStatus=$(aws cloudfront get-invalidation --distribution-id $distributionid --id $invalidationid --profile $profile 2>&1 | jq '.Invalidation | .Status' | cut -d \" -f2)
+
 			while [ $invalidationStatus = "InProgress" ]; do
-				echo ==========================================
-				echo "Invalidation Status: "$invalidationStatus
+				HorizontalRule
+				echo "Invalidation Status:" $invalidationStatus
 				echo "Waiting for invalidation to complete..."
-				echo ==========================================
+				HorizontalRule
 				sleep 30
 				checkInvalidationstatus
 			done
-			osascript -e 'tell app "Terminal" to display dialog " CloudFront Invalidation '$invalidationStatus'"'
+
+			if [ "$(uname)" == "Darwin" ]; then
+				if [[ $DEBUGMODE = "1" ]]; then
+					echo MACOS
+				fi
+				osascript -e 'tell app "Terminal" to display dialog " CloudFront Invalidation ID: '$invalidationid' Status: '$invalidationStatus'"'
+			elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+				if [[ $DEBUGMODE = "1" ]]; then
+					LINUX
+				fi
+				echo "CloudFront Invalidation $invalidationStatus"
+				completed
+			fi
 		done <<< "$invalidations"
 	fi
 }
