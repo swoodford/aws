@@ -1,7 +1,8 @@
-aws
+![aws](aws.png)
+[https://github.com/swoodford/aws](https://github.com/swoodford/aws)
 =======
 
-A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/)
+A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/).
 
 Most require the [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://stedolan.github.io/jq/)
 
