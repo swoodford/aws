@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 # This script will install the AWS CLI
 # Requires Homebrew, Python, pip
 
@@ -20,5 +21,6 @@ if [[ $INSTALL =~ ^([yY][eE][sS]|[yY])$ ]]; then
 		aws configure
 		complete -C '/usr/local/bin/aws_completer' aws
 	}
+	echo
 	echo "Completed."
 fi
