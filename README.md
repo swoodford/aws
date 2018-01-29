@@ -1,13 +1,31 @@
 ![aws](/images/aws.png)
 =======
 ### [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
-
-
-A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/).
-
-Most require the [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://stedolan.github.io/jq/)
-
 [![Build Status](https://travis-ci.org/swoodford/aws.svg?branch=master)](https://travis-ci.org/swoodford/aws)
+
+#### A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/) using the [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://stedolan.github.io/jq/).
+
+**What Is the AWS Command Line Interface?**
+
+The AWS CLI is an open source tool built on top of the AWS SDK for Python (Boto) that provides commands for interacting with AWS services.
+
+[Installing the AWS Command Line Interface](https://docs.aws.amazon.com/cli/latest/userguide/installing.html)
+
+**Requirements**
+* Python 2 version 2.6.5+ or Python 3 version 3.3+
+* Windows, Linux, macOS, or Unix
+
+If you already have pip and a supported version of Python, you can install the AWS CLI with the following command:
+
+`$ pip install awscli --upgrade --user`
+
+[Configuring the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html)
+
+For general use, the aws configure command is the fastest way to set up your AWS CLI installation.
+`$ aws configure`
+
+The AWS CLI will prompt you for four pieces of information. AWS Access Key ID and AWS Secret Access Key are your account credentials.
+
 
 ![cloudfront](/images/cf.png)
 - **[cloudfront-invalidation-status.sh](cloudfront-invalidation-status.sh)** Checks CloudFront Distributions for cache invalidation status to complete
