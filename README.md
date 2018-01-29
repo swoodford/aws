@@ -1,6 +1,7 @@
 ![aws](aws.png)
-[https://github.com/swoodford/aws](https://github.com/swoodford/aws)
 =======
+## [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
+
 
 A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/).
 
