@@ -6,7 +6,7 @@
 
 #### [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
 
-### Table of contents
+## Table of contents
 
 - [Getting Started](#getting-started)
 - [What's Included](#tools-included-in-this-repo)
@@ -14,9 +14,9 @@
 - [Creator](#creator)
 - [Copyright and License](#copyright-and-license)
 
-### Getting Started
+## Getting Started
 
-**What is the AWS Command Line Interface?**
+### What is the AWS Command Line Interface?
 
 The AWS CLI is an open source tool built on top of the AWS SDK for Python (Boto) that provides commands for interacting with AWS services.
 
@@ -44,7 +44,7 @@ The AWS CLI supports named profiles stored in the config and credentials files. 
 
 `$ aws configure --profile example`
 
-**What is jq?**
+### What is jq?
 
 jq is a lightweight and flexible command-line JSON processor.
 
@@ -55,7 +55,7 @@ OS X: Use [Homebrew](https://brew.sh/) to install jq 1.5 with `brew install jq`.
 Linux: jq 1.5 is in the official [Debian](https://packages.debian.org/jq) and [Ubuntu](http://packages.ubuntu.com/jq) repositories. Install using `sudo apt-get install jq`.
 
 
-### Tools included in this repo:
+## Tools included in this repo:
 
 ![cloudfront](/images/cf.png)
 #### CloudFront
@@ -120,17 +120,17 @@ Linux: jq 1.5 is in the official [Debian](https://packages.debian.org/jq) and [U
 - **[install-s3cmd.sh](install-s3cmd.sh)** Install and setup [s3cmd](https://github.com/s3tools/s3cmd) from the GitHub Repo
 - **[terraform-redact-iam-secrets.sh](terraform-redact-iam-secrets.sh)** Replaces AWS IAM Secret Keys and IAM SES SMTP Passwords with "REDACTED" in [Terraform](https://www.terraform.io/) state files
 
-### Bugs and feature requests
+## Bugs and feature requests
 Have a bug or a feature request? The [issue tracker](https://github.com/swoodford/aws/issues) is the preferred channel for bug reports, feature requests and submitting pull requests.
 If your problem or idea is not addressed yet, [please open a new issue](https://github.com/swoodford/aws/issues/new).
 
-### Creator
+## Creator
 
 **Shawn Woodford**
 
 - <https://shawnwoodford.com>
 - <https://github.com/swoodford>
 
-### Copyright and License
+## Copyright and License
 
 Code and Documentation Copyright 2012-2018 Shawn Woodford. Code released under the [Apache License 2.0](https://github.com/swoodford/aws/blob/master/LICENSE).
