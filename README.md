@@ -14,7 +14,7 @@
 
 **Requirements:**
 * Python 2 version 2.6.5+ or Python 3 version 3.3+
-* Windows, Linux, macOS, or Unix
+* macOS, Linux, or Unix
 
 >   If you already have pip and a supported version of Python, you can install the AWS CLI with the following command:
 
@@ -68,9 +68,9 @@
 
 ![s3](/images/s3.png)
 #### S3
-- **[s3-buckets-local-backup.sh](s3-buckets-local-backup.sh)** Backup all contents of all S3 buckets in AWS account locally
 - **[s3-buckets-file-size-s3api.sh](s3-buckets-file-size-s3api.sh)** Count total size of all data stored in all S3 buckets using [s3api](https://docs.aws.amazon.com/cli/latest/reference/s3api/index.html) (fastest)
 - **[s3-buckets-file-size-s3cmd.sh](s3-buckets-file-size-s3cmd.sh)** Count total size of all data stored in all S3 buckets using [s3cmd](https://github.com/s3tools/s3cmd) (slower)
+- **[s3-buckets-local-backup.sh](s3-buckets-local-backup.sh)** Backup all contents of all S3 buckets in AWS account locally
 - **[s3-buckets-security-audit.sh](s3-buckets-security-audit.sh)** Export S3 bucket ACL, CORS, Policy and Website as JSON for auditing security of all buckets
 - **[s3-fix-content-type-metadata.sh](s3-fix-content-type-metadata.sh)** Safely fix invalid content-type metadata on AWS S3 bucket website assets for some common filetypes
 - **[s3-openbucketpolicy.sh](s3-openbucketpolicy.sh)** Set an S3 bucket policy to allow GetObject requests from any IP address
