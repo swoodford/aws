@@ -1,12 +1,11 @@
-<p align="center">
-# ![aws](/images/aws.png)
+<h1 align="center">![aws](/images/aws.png)</h1>
 
 [![Build Status](https://travis-ci.org/swoodford/aws.svg?branch=master)](https://travis-ci.org/swoodford/aws)
 
 #### [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
 
-## A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/) using the [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://stedolan.github.io/jq/).
-</p>
+<h2 align="center">A collection of bash shell scripts for automating various tasks with [Amazon Web Services](https://aws.amazon.com/) using the [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://stedolan.github.io/jq/).</h2>
+
 
 **What Is the AWS Command Line Interface?**
 
