@@ -6,6 +6,16 @@
 
 #### [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
 
+### Table of contents
+
+- [Quick start](#quick-start)
+- [What's included](#tools-included-in-this-repo)
+- [Bugs and feature requests](#bugs-and-feature-requests)
+- [Creator](#creator)
+- [Copyright and license](#copyright-and-license)
+
+### Quick start
+
 **What Is the AWS Command Line Interface?**
 
 >   The AWS CLI is an open source tool built on top of the AWS SDK for Python (Boto) that provides commands for interacting with AWS services.
