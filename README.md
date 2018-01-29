@@ -9,7 +9,7 @@ and jq: https://stedolan.github.io/jq/
 
 [![Build Status](https://travis-ci.org/swoodford/aws.svg?branch=master)](https://travis-ci.org/swoodford/aws)
 
-- **[cloudfront-invalidation-status.sh]** Checks Cloudfront Distributions for cache invalidation status to complete
+- **[cloudfront-invalidation-status.sh](cloudfront-invalidation-status.sh)** Checks Cloudfront Distributions for cache invalidation status to complete
 - **cloudwatch-create-alarms.sh** Create AWS CloudWatch alarms for EC2, RDS, Load Balancer environments
 - **convert-iplist-cidr-json-array.sh** Converts an IPv4 iplist to CIDR block notation and JSON array format, sorting and de-duplicating IPs
 - **ec2-associate-elastic-ip.sh** Reassign a previously allocated Elastic IP to the instance which runs this script
