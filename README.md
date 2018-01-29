@@ -39,5 +39,6 @@ and jq: https://stedolan.github.io/jq/
 - **vpc-sg-import-rules-cloudfront.sh** Create VPC Security Group with CloudFront IP ranges
 - **vpc-sg-import-rules-pingdom.sh** Create VPC Security Group with Pingdom probe server IP ranges
 - **vpc-sg-update-rules-pingdom.sh** Update existing AWS VPC Security Groups with new IP rules to allow access to each Pingdom probe server IP at the port specified
+- **waf-export-ip-sets.sh** Export each AWS WAF IP set match condition to a JSON file for backup
 - **waf-import-ip-set-facebook.sh** Import list of current Facebook crawl server IPs into AWS WAF IP Set - work in progress, currently not possible to execute
 - **waf-web-acl-pingdom.sh** Manage WAF Web ACL to allow current Pingdom probe server IPs by creating or updating AWS WAF IP Addresses Set, Rules and Web ACLs
