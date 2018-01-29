@@ -8,15 +8,15 @@
 
 ### Table of contents
 
-- [Quick start](#quick-start)
-- [What's included](#tools-included-in-this-repo)
-- [Bugs and feature requests](#bugs-and-feature-requests)
+- [Getting Started](#getting-started)
+- [What's Included](#tools-included-in-this-repo)
+- [Bugs and Feature Requests](#bugs-and-feature-requests)
 - [Creator](#creator)
-- [Copyright and license](#copyright-and-license)
+- [Copyright and License](#copyright-and-license)
 
-### Quick start
+### Getting Started
 
-**What Is the AWS Command Line Interface?**
+**What is the AWS Command Line Interface?**
 
 >   The AWS CLI is an open source tool built on top of the AWS SDK for Python (Boto) that provides commands for interacting with AWS services.
 
@@ -43,6 +43,17 @@
 >   The AWS CLI supports named profiles stored in the config and credentials files. You can configure additional profiles by using `aws configure` with the `--profile option` or by adding entries to the config and credentials files.
 
 `$ aws configure --profile example`
+
+**What is jq?**
+
+>   jq is a lightweight and flexible command-line JSON processor.
+
+[Installing jq](https://stedolan.github.io/jq/download/)
+
+>   OS X: Use [Homebrew](https://brew.sh/) to install jq 1.5 with `brew install jq`.
+
+>   Linux: jq 1.5 is in the official [Debian](https://packages.debian.org/jq) and [Ubuntu](http://packages.ubuntu.com/jq) repositories. Install using `sudo apt-get install jq`.
+
 
 ### Tools included in this repo:
 
