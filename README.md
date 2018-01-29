@@ -1,10 +1,10 @@
 <h1 align="center"><img src="/images/aws.png" alt="AWS" width=130 height=130></h1>
 
+<h2 align="center">A collection of bash shell scripts for automating various tasks with <a href="https://aws.amazon.com/" target="_blank">Amazon Web Services</a> using the <a href="https://aws.amazon.com/cli/" target="_blank">AWS CLI</a> and <a href="https://stedolan.github.io/jq/" target="_blank">jq</a>.</h2>
+
 [![Build Status](https://travis-ci.org/swoodford/aws.svg?branch=master)](https://travis-ci.org/swoodford/aws)
 
 #### [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
-
-<h2 align="center">A collection of bash shell scripts for automating various tasks with <a href="https://aws.amazon.com/" target="_blank">Amazon Web Services</a> using the <a href="https://aws.amazon.com/cli/" target="_blank">AWS CLI</a> and <a href="https://stedolan.github.io/jq/" target="_blank">jq</a>.</h2>
 
 **What Is the AWS Command Line Interface?**
 
@@ -112,4 +112,4 @@ If your problem or idea is not addressed yet, [please open a new issue](https://
 
 ### Copyright and License
 
-Code and Documentation Copyright 2012-2018 Shawn Woodford. Code released under the [Apache License 2.0](https://github.com/swoodford/aws/LICENSE).
+Code and Documentation Copyright 2012-2018 Shawn Woodford. Code released under the [Apache License 2.0](https://github.com/swoodford/aws/blob/master/LICENSE).
