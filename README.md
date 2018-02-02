@@ -50,9 +50,19 @@ jq is a lightweight and flexible command-line JSON processor.
 
 [Installing jq](https://stedolan.github.io/jq/download/)
 
-OS X: Use [Homebrew](https://brew.sh/) to install jq 1.5 with `brew install jq`.
+OS X: Use [Homebrew](https://brew.sh/) to install jq:
 
-Linux: jq 1.5 is in the official [Debian](https://packages.debian.org/jq) and [Ubuntu](http://packages.ubuntu.com/jq) repositories. Install using `sudo apt-get install jq`.
+`$ brew install jq`
+
+Linux: jq is in the official [Amazon Linux AMI](https://aws.amazon.com/amazon-linux-ami/2017.03-packages/#j), [Debian](https://packages.debian.org/jq) and [Ubuntu](http://packages.ubuntu.com/jq) repositories.
+
+Amazon Linux AMI, RHEL, CentOS:
+
+`$ sudo yum install jq`
+
+Debian/Ubuntu:
+
+`$ sudo apt-get install jq`
 
 
 ## Tools included in this repo:
