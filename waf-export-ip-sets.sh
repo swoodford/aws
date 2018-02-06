@@ -105,7 +105,6 @@ function ExportExistingIPSet(){
 
 	# Make the subfolder directory
 	if ! [ -d $SUBFOLDER ]; then
-		echo
 		echo "Making Subfolder:" $SUBFOLDER
 		echo
 		mkdir $SUBFOLDER

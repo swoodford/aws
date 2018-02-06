@@ -10,17 +10,21 @@ if [[ $INSTALL =~ ^([yY][eE][sS]|[yY])$ ]]; then
 	command -v pip >/dev/null 2>&1 || {
 		brew install python
 
-		echo "Installing pip"
-		sudo easy_install pip
+		echo "Installing Python pip"
+		sudo easy_install pip && echo; echo "Installed Python pip."
 	}
 
 	# Test if AWS CLI is installed
 	command -v aws >/dev/null 2>&1 || {
-		pip install awscli --upgrade --user
+		echo "Installing awscli"
+		pip install awscli --upgrade --user && echo; echo "Installed awscli."
 
 		aws configure
 		complete -C '/usr/local/bin/aws_completer' aws
+	} && {
+		echo "Updating awscli"
+		pip install awscli --upgrade --user && echo; echo "Updated awscli."
 	}
-	echo
+
 	echo "Completed."
 fi
