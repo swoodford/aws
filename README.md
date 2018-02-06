@@ -74,6 +74,7 @@ Debian/Ubuntu:
 ![cloudwatch](/images/cw.png)
 #### CloudWatch
 - **[cloudwatch-create-alarms.sh](cloudwatch-create-alarms.sh)** Create AWS CloudWatch alarms for EC2, RDS, Load Balancer environments
+- **[cloudwatch-logs-retention-policy.sh](cloudwatch-logs-retention-policy.sh)** Set CloudWatch Logs Retention Policy for all log groups in all regions available
 
 ![ec2](/images/ec2.png)
 #### EC2
