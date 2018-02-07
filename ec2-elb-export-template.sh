@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # This script will export an AWS ELB to a JSON Template File for version control
-# The ELB can then be duplicated or recreated from the JSON Template File
+# The ELB can then be duplicated or renamed or recreated from the JSON Template File
 # An AWS CLI profile can be passed into the script as an argument
 # Requires the AWS CLI and jq
 
@@ -40,6 +40,7 @@ if [ $# -eq 0 ]; then
 	echo "Usage: ./$scriptname profile"
 	echo "Where profile is the AWS CLI profile name"
 	echo "Using default profile"
+	echo
 	profile=default
 else
 	profile=$1
@@ -77,7 +78,20 @@ check_command "jq"
 
 # Ensure Variables are set
 if [ "$ELBname" = "YOUR-EXISTING-ELB-NAME-HERE" ] || [ -z "$ELBname" ]; then
-	fail "Must set variable for existing ELB name!"
+	read -r -p "Enter name of your existing source EC2 ELB: " ELBname
+	TemplateFileName=$ELBname-template.json
+	if [ -z "$ELBname" ]; then
+		fail "Must specify an existing ELB name!"
+	fi
+fi
+
+if [ "$CreateNewELB" = "true" ]; then
+	if [ "$NewELBname" = "YOUR-NEW-ELB-NAME-HERE" ] || [ -z "$NewELBname" ]; then
+		read -r -p "Enter desired name of your new EC2 ELB: " NewELBname
+		if [ -z "$NewELBname" ]; then
+			fail "Must specify a new ELB name!"
+		fi
+	fi
 fi
 
 # Create Template File
@@ -174,7 +188,7 @@ if [ "$CreateNewELB" = "true" ]; then
 	# Read the Template file and store as var
 	jsoninput=$(cat $TemplateFileName)
 
-	LoadBalancerName=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .LoadBalancerName' | cut -d '"' -f2)
+	LoadBalancerName=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .LoadBalancerName' | cut -d \" -f2)
 
 	# Determine number of Listeners
 	NumListeners=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | length')
@@ -201,17 +215,17 @@ if [ "$CreateNewELB" = "true" ]; then
 		fi
 		if [ "$HTTPS" = "true" ]; then
 			# One Listener with SSL
-			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .Protocol' | cut -d '"' -f2)
-			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstanceProtocol' | cut -d '"' -f2)
-			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .LoadBalancerPort' | cut -d '"' -f2)
-			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstancePort' | cut -d '"' -f2)
-			SSLCertificateId=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .SSLCertificateId' | cut -d '"' -f2)
+			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .Protocol' | cut -d \" -f2)
+			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstanceProtocol' | cut -d \" -f2)
+			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .LoadBalancerPort' | cut -d \" -f2)
+			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstancePort' | cut -d \" -f2)
+			SSLCertificateId=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .SSLCertificateId' | cut -d \" -f2)
 		else
 			# One Listener without SSL
-			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .Protocol' | cut -d '"' -f2)
-			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstanceProtocol' | cut -d '"' -f2)
-			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .LoadBalancerPort' | cut -d '"' -f2)
-			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstancePort' | cut -d '"' -f2)
+			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .Protocol' | cut -d \" -f2)
+			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstanceProtocol' | cut -d \" -f2)
+			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .LoadBalancerPort' | cut -d \" -f2)
+			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | .InstancePort' | cut -d \" -f2)
 		fi
 
 	fi
@@ -223,27 +237,27 @@ if [ "$CreateNewELB" = "true" ]; then
 		fi
 		# Two Listeners one with SSL one without
 		if [ "$HTTPS" = "true" ]; then
-			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .Protocol' | cut -d '"' -f2)
-			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .InstanceProtocol' | cut -d '"' -f2)
-			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .LoadBalancerPort' | cut -d '"' -f2)
-			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .InstancePort' | cut -d '"' -f2)
-			SSLCertificateId=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .SSLCertificateId' | cut -d '"' -f2)
+			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .Protocol' | cut -d \" -f2)
+			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .InstanceProtocol' | cut -d \" -f2)
+			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .LoadBalancerPort' | cut -d \" -f2)
+			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .InstancePort' | cut -d \" -f2)
+			SSLCertificateId=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol=="HTTPS") | .SSLCertificateId' | cut -d \" -f2)
 
-			Protocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .Protocol' | cut -d '"' -f2)
-			InstanceProtocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .InstanceProtocol' | cut -d '"' -f2)
-			LoadBalancerPort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .LoadBalancerPort' | cut -d '"' -f2)
-			InstancePort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .InstancePort' | cut -d '"' -f2)
+			Protocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .Protocol' | cut -d \" -f2)
+			InstanceProtocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .InstanceProtocol' | cut -d \" -f2)
+			LoadBalancerPort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .LoadBalancerPort' | cut -d \" -f2)
+			InstancePort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[] | .Listener | select(.Protocol!="HTTPS") | .InstancePort' | cut -d \" -f2)
 		else
 			# Two Listeners both without SSL
-			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .Protocol' | cut -d '"' -f2)
-			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .InstanceProtocol' | cut -d '"' -f2)
-			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .LoadBalancerPort' | cut -d '"' -f2)
-			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .InstancePort' | cut -d '"' -f2)
+			Protocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .Protocol' | cut -d \" -f2)
+			InstanceProtocol=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .InstanceProtocol' | cut -d \" -f2)
+			LoadBalancerPort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .LoadBalancerPort' | cut -d \" -f2)
+			InstancePort=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[0] | .Listener | .InstancePort' | cut -d \" -f2)
 
-			Protocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .Protocol' | cut -d '"' -f2)
-			InstanceProtocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .InstanceProtocol' | cut -d '"' -f2)
-			LoadBalancerPort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .LoadBalancerPort' | cut -d '"' -f2)
-			InstancePort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .InstancePort' | cut -d '"' -f2)
+			Protocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .Protocol' | cut -d \" -f2)
+			InstanceProtocol2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .InstanceProtocol' | cut -d \" -f2)
+			LoadBalancerPort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .LoadBalancerPort' | cut -d \" -f2)
+			InstancePort2=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .ListenerDescriptions | .[1] | .Listener | .InstancePort' | cut -d \" -f2)
 		fi
 	fi
 
@@ -251,7 +265,7 @@ if [ "$CreateNewELB" = "true" ]; then
 	AvailabilityZones=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .AvailabilityZones')
 	Subnets=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .Subnets')
 	SecurityGroups=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .SecurityGroups')
-	Scheme=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .Scheme' | cut -d '"' -f2)
+	Scheme=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .Scheme' | cut -d \" -f2)
 
 	if [ "$DEBUGMODE" -eq "1" ]; then
 		echo "$LoadBalancerName"
@@ -404,11 +418,11 @@ if [ "$CreateNewELB" = "true" ]; then
 		echo
 
 		# Store Healthcheck as JSON
-		Target=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .Target' | cut -d '"' -f2)
-		Interval=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .Interval' | cut -d '"' -f2)
-		Timeout=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .Timeout' | cut -d '"' -f2)
-		UnhealthyThreshold=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .UnhealthyThreshold' | cut -d '"' -f2)
-		HealthyThreshold=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .HealthyThreshold' | cut -d '"' -f2)
+		Target=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .Target' | cut -d \" -f2)
+		Interval=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .Interval' | cut -d \" -f2)
+		Timeout=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .Timeout' | cut -d \" -f2)
+		UnhealthyThreshold=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .UnhealthyThreshold' | cut -d \" -f2)
+		HealthyThreshold=$(echo $jsoninput | jq '.LoadBalancerDescriptions | .[] | .HealthCheck | .HealthyThreshold' | cut -d \" -f2)
 
 		if [ "$DEBUGMODE" -eq "1" ]; then
 			echo "$Target"
@@ -451,11 +465,11 @@ if [ "$CreateNewELB" = "true" ]; then
 		echo
 
 		# Store Attributes as JSON
-		ConnectionDraining=$(echo $jsoninput | jq '.LoadBalancerAttributes | .ConnectionDraining | .Enabled' | cut -d '"' -f2)
-		ConnectionDrainingTimeout=$(echo $jsoninput | jq '.LoadBalancerAttributes | .ConnectionDraining | .Timeout' | cut -d '"' -f2)
-		CrossZoneLoadBalancing=$(echo $jsoninput | jq '.LoadBalancerAttributes | .CrossZoneLoadBalancing | .Enabled' | cut -d '"' -f2)
-		ConnectionSettings=$(echo $jsoninput | jq '.LoadBalancerAttributes | .ConnectionSettings | .IdleTimeout' | cut -d '"' -f2)
-		AccessLog=$(echo $jsoninput | jq '.LoadBalancerAttributes | .AccessLog | .Enabled' | cut -d '"' -f2)
+		ConnectionDraining=$(echo $jsoninput | jq '.LoadBalancerAttributes | .ConnectionDraining | .Enabled' | cut -d \" -f2)
+		ConnectionDrainingTimeout=$(echo $jsoninput | jq '.LoadBalancerAttributes | .ConnectionDraining | .Timeout' | cut -d \" -f2)
+		CrossZoneLoadBalancing=$(echo $jsoninput | jq '.LoadBalancerAttributes | .CrossZoneLoadBalancing | .Enabled' | cut -d \" -f2)
+		ConnectionSettings=$(echo $jsoninput | jq '.LoadBalancerAttributes | .ConnectionSettings | .IdleTimeout' | cut -d \" -f2)
+		AccessLog=$(echo $jsoninput | jq '.LoadBalancerAttributes | .AccessLog | .Enabled' | cut -d \" -f2)
 
 		if [ "$DEBUGMODE" -eq "1" ]; then
 			echo "$ConnectionDraining"
