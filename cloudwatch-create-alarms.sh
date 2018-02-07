@@ -54,8 +54,13 @@ else
 fi
 
 # Verify ALARMACTION is setup with some alert mechanism
-if [[ -z $ALARMACTION ]]; then
-  fail "ALARMACTION not configured."
+if [[ -z $ALARMACTION ]] || [[ "$ALARMACTION" == "arn:aws:sns:us-east-1:YOURACCOUNTNUMBER:YOURSNSALERTNAME" ]]; then
+  echo "Alarm Action SNS Topic ARN?"
+  echo "Example: arn:aws:sns:us-east-1:YOURACCOUNTNUMBER:YOURSNSALERTNAME"
+  read -r ALARMACTION
+  if [[ -z $ALARMACTION ]]; then
+    fail "Alarm Action must be configured."
+  fi
 fi
 
 HorizontalRule
