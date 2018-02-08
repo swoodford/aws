@@ -122,7 +122,7 @@ function AllBuckets(){
   TOTALNUMBERS3BUCKETS=$(echo "$LS" | wc -l | rev | cut -d " " -f1 | rev)
 
   # Get list of all bucket names
-  BUCKETNAMES=$(echo "$LS" | cut -d ' ' -f 3 | nl)
+  BUCKETNAMES=$(echo "$LS" | cut -d ' ' -f3 | nl)
 
   echo
   HorizontalRule
@@ -136,7 +136,7 @@ function AllBuckets(){
 
   for (( COUNT=$START; COUNT<=$TOTALNUMBERS3BUCKETS; COUNT++ ))
   do
-    CURRENTBUCKET=$(echo "$BUCKETNAMES" | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+    CURRENTBUCKET=$(echo "$BUCKETNAMES" | grep -w [^0-9][[:space:]]$COUNT | cut -f2)
     HorizontalRule
     echo \#$COUNT $CURRENTBUCKET
 

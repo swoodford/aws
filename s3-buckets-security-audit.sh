@@ -69,7 +69,7 @@ fi
 BUCKETNAMES=$(echo "$LS" | cut -d ' ' -f 3 | nl)
 
 # Count number of buckets
-TOTALNUMBERS3BUCKETS=$(echo "$BUCKETNAMES" | wc -l | cut -d ' ' -f 7)
+TOTALNUMBERS3BUCKETS=$(echo "$BUCKETNAMES" | wc -l | rev | cut -d " " -f1 | rev)
 
 echo
 HorizontalRule
@@ -101,7 +101,7 @@ START=1
 
 for (( COUNT=$START; COUNT<=$TOTALNUMBERS3BUCKETS; COUNT++ ))
 do
-  CURRENTBUCKET=$(echo "$BUCKETNAMES" | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+  CURRENTBUCKET=$(echo "$BUCKETNAMES" | grep -w [^0-9][[:space:]]$COUNT | cut -f2)
   HorizontalRule
   echo \#$COUNT $CURRENTBUCKET
 
