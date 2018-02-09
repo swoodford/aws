@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script will create the S3 IAM user, generate IAM keys, add to IAM group, generate user policy
 # You will want to modify for your own naming conventions and IAM user group name
 # Requires awscli and local IAM account with sufficient permissions

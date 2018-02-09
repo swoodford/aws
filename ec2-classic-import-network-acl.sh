@@ -1,5 +1,5 @@
-#!/bin/bash
-# This script will read from the list of CIDR IPs in the file ipblacklistmaster 
+#!/usr/bin/env bash
+# This script will read from the list of CIDR IPs in the file ipblacklistmaster
 # Then create an AWS EC2 Classic ACL rule to deny access to each CIDR IP specified
 
 # VERY IMPORTANT to set the correct Network ACL ID for the intended ACL

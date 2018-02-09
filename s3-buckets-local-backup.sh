@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script to backup all S3 bucket contents locally
 # Contents of each S3 bucket will be copied to the local subfolder specified
 # Requires aws cli (AWS CLI profile must have IAM permission to access all buckets)

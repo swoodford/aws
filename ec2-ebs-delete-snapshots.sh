@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script deletes snapshots for each EC2 volume that is tagged with SnapshotCreation=Automatic that matches the specified date
 
 # Verify AWS CLI Credentials are setup

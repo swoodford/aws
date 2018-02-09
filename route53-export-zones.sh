@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script will use cli53 to export the zone file for each Hosted Zone domain in Route 53 for git version control
 # Requires Python, pip, awscli, cli53
 # For more info on cli53 see https://github.com/barnybug/cli53

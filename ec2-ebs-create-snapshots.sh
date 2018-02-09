@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script takes a snapshot of each EC2 volume that is tagged with Backup=1
 # TODO: Add error handling and loop breaks
 
@@ -27,16 +27,16 @@ for (( COUNT=$START; COUNT<=$TOTALBACKUPVOLUMES; COUNT++ ))
 do
   echo "====================================================="
   echo \#$COUNT
-  
+
   VOLUME=$(echo "$DESCRIBEVOLUMES" | cut -f 9 | nl | grep -w $COUNT | cut -f 2)
   echo "Volume ID: "$VOLUME
-  
+
   NAME=$(echo "$DESCRIBEVOLUMES" | grep Name | cut -f 3 | nl | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
   echo "Volume Name: "$NAME
-  
+
   CLIENT=$(echo "$DESCRIBEVOLUMES" | grep Client | cut -f 3 | nl | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
   echo "Client: "$CLIENT
-  
+
   DESCRIPTION=$NAME-$(date +%m-%d-%Y)
   echo "Snapshot Description: "$DESCRIPTION
 

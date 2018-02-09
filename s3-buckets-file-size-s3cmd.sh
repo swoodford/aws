@@ -1,4 +1,4 @@
-# #!/bin/bash
+# #!/usr/bin/env bash
 
 ##################################################################
 # Depreciating this script since using the s3api is must faster! #

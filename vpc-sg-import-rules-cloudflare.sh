@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create VPC Security Group with CloudFlare IP ranges
 # Requires curl, jq
@@ -69,7 +69,7 @@ function checkGroups (){
 
 		addRules
 	else
-		echo	 
+		echo
 		echo "====================================================="
 		echo "Group $GROUPNAME Already Exists"
 		GROUPID=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="CloudFlare") | .GroupId' | cut -d '"' -f2)

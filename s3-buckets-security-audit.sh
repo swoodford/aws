@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script to export S3 bucket ACL, CORS, Policy and Website JSON for auditing security of all buckets
 # Each S3 bucket will have a JSON file generated in the subfolder specified
 # Requires aws s3api, jq, (AWS CLI profile must have IAM permission to access all buckets)

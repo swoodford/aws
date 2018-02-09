@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script creates AWS CloudWatch alarms based on standard metrics and user input to setup alarms for each environment
 # Requires AWS CLI Setup and you must setup your ALARMACTION
 

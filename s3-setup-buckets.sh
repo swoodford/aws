@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script will create S3 buckets, set CORS config and tag bucket with client name
 # Requires awscli
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create VPC Security Group with Cloudfront IP ranges
 
@@ -39,7 +39,7 @@ function addRules (){
 		aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
 		echo "====================================================="
 	else
-		echo	 
+		echo
 		echo "====================================================="
 		echo "Group $GROUPNAME Already Exists"
 		GROUPID=$(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2)

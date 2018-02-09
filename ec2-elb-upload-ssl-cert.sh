@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script will upload an SSL Certificate to AWS for use in setting up an ELB
 # Requires AWS CLI Setup and jq
 
