@@ -73,7 +73,18 @@ if ! [[ $Proceed =~ ^([yY][eE][sS]|[yY])$ ]]; then
 	fail "Cancelled."
 fi
 
-LISTGLACIER=$(aws s3api list-objects-v2 --bucket "$S3BUCKET" --query "Contents[?StorageClass=='GLACIER'].Key" --output json --profile $profile --max-items 9999 2>&1)
+S3BUCKETREGION=$(aws s3api get-bucket-location --bucket "$S3BUCKET" --output text --profile $profile 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$S3BUCKETREGION"
+else
+	if echo $S3BUCKETREGION | grep -q None; then
+	REGION="us-east-1"
+	else
+	REGION=$S3BUCKETREGION
+	fi
+fi
+
+LISTGLACIER=$(aws s3api list-objects-v2 --bucket "$S3BUCKET" --query "Contents[?StorageClass=='GLACIER'].Key" --output json --profile $profile --max-items 9999 --region $REGION 2>&1)
 
 if [ ! $? -eq 0 ]; then
 	fail "$LISTGLACIER"
@@ -86,7 +97,12 @@ fi
 
 while read glacier
 do
-	aws s3 rm s3://"$S3BUCKET"/$glacier --profile $profile 2>&1
+	RM=$(aws s3 rm s3://"$S3BUCKET"/"$glacier" --profile $profile --region $REGION 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$RM"
+	else
+		echo "Deleted object:" "$glacier"
+	fi
 done < GLACIER.txt
 
 rm GLACIER.txt
