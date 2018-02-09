@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Script to count total size of all data stored in a single or in all S3 buckets (IAM account must have permission to access all buckets)
-# Requires aws s3api, jq
+# Script to count total size of all data stored in a single or in all S3 buckets
+# Requires aws s3api, jq, IAM account must have permission to access all buckets
 
 # Functions
 
