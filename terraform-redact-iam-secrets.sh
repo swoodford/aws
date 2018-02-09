@@ -3,6 +3,10 @@
 # This script replaces AWS IAM Secret Keys and IAM SES SMTP Passwords with "REDACTED"
 # in Terraform state files so they can be safely committed to git without exposing credentials.
 
+# Update:
+# A better workaround to this problem is to use the S3 backend type in Terraform to avoid
+# committing your state files to git: https://www.terraform.io/docs/backends/types/s3.html
+
 # Usage:
 # Run from dir that contains environment subfolders. Requires Terraform and jq.
 # Assumes three environments exist within subfolders: dev, staging, production.
