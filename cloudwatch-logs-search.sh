@@ -103,10 +103,13 @@ function GetRegions(){
 		echo "Begin GetRegions Function"
 	fi
 	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
-	if echo "$AWSregions" | egrep -iq "error|not"; then
+	if [ ! $? -eq 0 ]; then
 		fail "$AWSregions"
 	else
 		ParseRegions=$(echo "$AWSregions" | jq '.Regions | .[] | .RegionName'| cut -d \" -f2 | sort)
+		if [ ! $? -eq 0 ]; then
+			fail "$ParseRegions"
+		fi
 	fi
 	TotalRegions=$(echo "$ParseRegions" | wc -l | rev | cut -d " " -f1 | rev)
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -142,14 +145,12 @@ function ListLogGroups(){
 		echo "Begin ListLogGroups Function"
 	fi
 	ListLogGroups=$(aws logs describe-log-groups --region=$Region --output=json --profile $profile 2>&1)
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo ListLogGroups: "$ListLogGroups"
-	fi
 	if [ ! $? -eq 0 ]; then
 		fail "$ListLogGroups"
-	# if echo "$ListLogGroups" | egrep -iq "error|not"; then
-	# 	fail "$ListLogGroups"
 	else
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo ListLogGroups: "$ListLogGroups"
+		fi
 		ParseLogGroups=$(echo "$ListLogGroups" | jq '.logGroups | .[] | .logGroupName' | cut -d \" -f2)
 		if [[ $DEBUGMODE = "1" ]]; then
 			echo ParseLogGroups: "$ParseLogGroups"
@@ -219,6 +220,13 @@ function FilterLogEvents(){
 				pause
 			fi
 			FilterLogEvents=$(aws logs filter-log-events --region $Region --log-group-name "$LogGroup" --filter-pattern \""$FilterPattern"\" --output=json --profile $profile 2>&1)
+			if [ ! $? -eq 0 ]; then
+				fail "$FilterLogEvents"
+			fi
+			if [[ $DEBUGMODE = "1" ]]; then
+				echo "FilterLogEvents: $FilterLogEvents"
+				pause
+			fi
 			Events=$(echo "$FilterLogEvents" | jq '.events | .[]')
 			if [ -z "$Events" ]; then
 				echo "No matching events found for $LogGroup in region $Region."
