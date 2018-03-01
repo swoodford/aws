@@ -101,7 +101,11 @@ check_command "jq"
 # fi
 
 if [[ "$Region" == "x" ]]; then
+	echo
+	HorizontalRule
 	read -r -p "Enter a single region name or press return for all regions: " Region
+	HorizontalRule
+	echo
 fi
 
 
@@ -189,7 +193,6 @@ function SetAlarms(){
 			echo "Instance: $InstanceID"
 			pause
 		fi
-		# aws ec2 describe-tags --filters Name=key,Values=Name Name=resource-id,Values="i-00421ed502fd925a6"
 		InstanceNameTag=$(aws ec2 describe-tags --filters Name=key,Values=Name Name=resource-id,Values="$InstanceID" --region $Region --output=json --profile $profile 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$InstanceNameTag"
