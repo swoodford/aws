@@ -90,18 +90,18 @@ function GetProbeIPs(){
 # Gets a Change Token
 function ChangeToken(){
 	CHANGETOKEN=$(aws waf get-change-token --profile $profile 2>&1 | jq '.ChangeToken' | cut -d '"' -f2)
+	if [ ! $? -eq 0 ]; then
+		fail "$CHANGETOKEN"
+	fi
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "CHANGETOKEN: "$CHANGETOKEN
-	fi
-	if echo $CHANGETOKEN | grep -q error; then
-		fail "$CHANGETOKEN"
 	fi
 }
 
 # Checks the status of a single changetoken
 function ChangeTokenStatus(){
 	CHANGETOKENSTATUS=$(aws waf get-change-token-status --change-token $CHANGETOKEN --profile $profile 2>&1 | jq '.ChangeTokenStatus' | cut -d '"' -f2)
-	if echo $CHANGETOKENSTATUS | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$CHANGETOKENSTATUS"
 	fi
 }
@@ -126,8 +126,8 @@ function BuildUpdateSetInsertJSON(){
 (
 cat << EOP
 {
-    "IPSetId": "$IPSETID", 
-    "ChangeToken": "$CHANGETOKEN", 
+    "IPSetId": "$IPSETID",
+    "ChangeToken": "$CHANGETOKEN",
     "Updates": [
 EOP
 ) > json1
@@ -143,9 +143,9 @@ EOP
 (
 cat << EOP
         {
-            "Action": "INSERT", 
+            "Action": "INSERT",
             "IPSetDescriptor": {
-                "Type": "IPV4", 
+                "Type": "IPV4",
                 "Value": "$iplist/32"
             }
         },
@@ -187,8 +187,8 @@ function BuildUpdateSetDeleteJSON(){
 (
 cat << EOP
 {
-    "IPSetId": "$IPSETID", 
-    "ChangeToken": "$CHANGETOKEN", 
+    "IPSetId": "$IPSETID",
+    "ChangeToken": "$CHANGETOKEN",
     "Updates": [
 EOP
 ) > json1
@@ -204,9 +204,9 @@ EOP
 (
 cat << EOP
         {
-            "Action": "DELETE", 
+            "Action": "DELETE",
             "IPSetDescriptor": {
-                "Type": "IPV4", 
+                "Type": "IPV4",
                 "Value": "$iplist"
             }
         },
@@ -246,7 +246,7 @@ EOP
 function UpdateSetInsertJSON(){
 	json=$(cat json5)
 	UPDATESET=$(aws waf update-ip-set --cli-input-json "$json" --profile $profile 2>&1)
-	if echo $UPDATESET | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$UPDATESET"
 	fi
 }
@@ -255,7 +255,7 @@ function UpdateSetInsertJSON(){
 function UpdateSetDeleteJSON(){
 	json=$(cat json5)
 	UPDATESET=$(aws waf update-ip-set --cli-input-json "$json" --profile $profile 2>&1)
-	if echo $UPDATESET | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$UPDATESET"
 	fi
 }
@@ -263,7 +263,7 @@ function UpdateSetDeleteJSON(){
 # Inserts a single IP into the IP Set
 function UpdateSetInsert(){
 	UPDATESET=$(aws waf update-ip-set --ip-set-id $IPSETID --change-token $CHANGETOKEN --updates 'Action=INSERT,IPSetDescriptor={Type=IPV4,Value="'"$iplist/32"'"}' --profile $profile 2>&1)
-	if echo $UPDATESET | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$UPDATESET"
 	fi
 }
@@ -271,7 +271,7 @@ function UpdateSetInsert(){
 # Deletes a single IP from the IP Set
 function UpdateSetDelete(){
 	UPDATESET=$(aws waf update-ip-set --ip-set-id $IPSETID --change-token $CHANGETOKEN --updates 'Action=DELETE,IPSetDescriptor={Type=IPV4,Value="'"$iplist"'"}' --profile $profile 2>&1)
-	if echo $UPDATESET | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$UPDATESET"
 	fi
 }
@@ -280,7 +280,7 @@ function UpdateSetDelete(){
 function CreateIPSet(){
 	ChangeToken
 	IPSETID=$(aws waf create-ip-set --name "$CONDITIONNAME" --change-token $CHANGETOKEN --profile $profile 2>&1 | jq '.IPSet | .IPSetId' | cut -d '"' -f2)
-	if echo $IPSETID | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$IPSETID"
 	fi
 	echo "IP Set ID:" "$IPSETID"
@@ -289,7 +289,7 @@ function CreateIPSet(){
 # Get list of all IP Sets
 function ListIPSets(){
 	IPSETID=$(aws waf list-ip-sets --limit 99 --output=json --profile $profile 2>&1 | jq '.IPSets | .[] | select(.Name=="'"$CONDITIONNAME"'") | .IPSetId' | cut -d '"' -f2)
-	if echo $IPSETID | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$IPSETID"
 	fi
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -300,7 +300,7 @@ function ListIPSets(){
 # Get list of IPs in a single IP Set
 function GetIPSet(){
 	GetIPSet=$(aws waf get-ip-set --ip-set-id "$IPSETID" --profile $profile 2>&1 | jq '.IPSet | .IPSetDescriptors | .[] | .Value' | cut -d '"' -f2)
-	if echo $GetIPSet | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$GetIPSet"
 	fi
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -312,7 +312,7 @@ function GetIPSet(){
 function CreateRule(){
 	ChangeToken
 	RULEID=$(aws waf create-rule --metric-name "$CONDITIONNAME" --name "Allow From $CONDITIONNAME" --change-token $CHANGETOKEN --profile $profile 2>&1 | jq '.Rule | .RuleId' | cut -d '"' -f2)
-	if echo $RULEID | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$RULEID"
 	fi
 	echo
@@ -326,7 +326,7 @@ function CreateRule(){
 function UpdateRule(){
 	ChangeToken
 	UPDATERULE=$(aws waf update-rule --rule-id "$RULEID" --change-token $CHANGETOKEN --updates 'Action=INSERT,Predicate={Negated=false,Type=IPMatch,DataId="'"$IPSETID"'"}' --profile $profile 2>&1) # | jq '.Rule | .RuleId' | cut -d '"' -f2)
-	if echo $UPDATERULE | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$UPDATERULE"
 	fi
 	if echo $UPDATERULE | jq '.ChangeToken' | grep -q error; then
@@ -344,7 +344,7 @@ function UpdateRule(){
 function CreateACL(){
 	ChangeToken
 	ACLID=$(aws waf create-web-acl --metric-name "$CONDITIONNAME" --name "Allow From $CONDITIONNAME" --default-action 'Type=BLOCK' --change-token $CHANGETOKEN --profile $profile 2>&1 | jq '.WebACL | .WebACLId' | cut -d '"' -f2)
-	if echo $ACLID | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$ACLID"
 	fi
 	echo
@@ -358,7 +358,7 @@ function CreateACL(){
 function UpdateACL(){
 	ChangeToken
 	UPDATEACL=$(aws waf update-web-acl --web-acl-id "$ACLID" --change-token $CHANGETOKEN --updates 'Action=INSERT,ActivatedRule={Priority=0,RuleId="'"$RULEID"'",Action={Type=ALLOW}}' --profile $profile 2>&1) # | jq '.Rule | .RuleId' | cut -d '"' -f2)
-	if echo $UPDATEACL | grep -q error; then
+	if [ ! $? -eq 0 ]; then
 		fail "$UPDATEACL"
 	fi
 	if echo $UPDATEACL | jq '.ChangeToken' | grep -q error; then
@@ -478,7 +478,7 @@ function WAF(){
 				# done < iplist-existing
 				# Verifying list is empty
 				ExportExistingIPSet
-				if [ "$CountIPSetIPs" -eq "1" ]; then 
+				if [ "$CountIPSetIPs" -eq "1" ]; then
 					completed
 				else
 					fail "Error deleting IPs from IP Set."
@@ -498,7 +498,7 @@ function WAF(){
 			# done < iplist
 			# Verifying all IPs added
 			ExportExistingIPSet
-			if [ "$CountIPSetIPs" -eq "$TOTALIPS" ]; then 
+			if [ "$CountIPSetIPs" -eq "$TOTALIPS" ]; then
 				completed
 			else
 				fail "Error adding IPs to IP Set."
@@ -520,7 +520,7 @@ function WAF(){
 				# done < iplist
 				# Verifying all IPs added
 				ExportExistingIPSet
-				if [ "$CountIPSetIPs" -eq "$TOTALIPS" ]; then 
+				if [ "$CountIPSetIPs" -eq "$TOTALIPS" ]; then
 					completed
 				else
 					fail "Error adding IPs to IP Set."
@@ -551,7 +551,7 @@ function WAF(){
 			# echo "Deleting Rule Name $RULENAME, Rule ID $RULEID"
 			# echo "====================================================="
 			# DELETERULE=$(aws waf delete-rule --rule-id "$RULEID" --profile $profile 2>&1)
-			# if echo $DELETERULE | grep -q error; then
+			# if [ ! $? -eq 0 ]; then
 			# 	fail "$DELETERULE"
 			# else
 			# 	echo "$DELETERULE"
@@ -562,7 +562,7 @@ function WAF(){
 			# echo "Deleting Set $CONDITIONNAME, Set ID $IPSETID"
 			# echo "====================================================="
 			# DELETESET=$(aws waf delete-ip-set --ip-set-id "$IPSETID" --profile $profile 2>&1)
-			# if echo $DELETESET | grep -q error; then
+			# if [ ! $? -eq 0 ]; then
 			# 	fail "$DELETESET"
 			# else
 			# 	echo "$DELETESET"
