@@ -63,19 +63,32 @@ fi
 
 # Get list of all IP Sets
 function ListIPSets(){
-	ListIPSets=$(aws waf list-ip-sets --output=json --profile $profile 2>&1 | jq '.IPSets | .[]')
-	if echo $ListIPSets | egrep -iq "error|not"; then
+	ListIPSets=$(aws waf list-ip-sets --output=json --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
 		fail "$ListIPSets"
 	fi
-	if [ -z "$ListIPSets" ]; then
+	ParseIPSets=$(echo "$ListIPSets" | jq '.IPSets | .[]')
+	if [ ! $? -eq 0 ]; then
+		fail "$ParseIPSets"
+	fi
+	if [ -z "$ParseIPSets" ]; then
 		fail "No WAF IP Sets Found!"
 	fi
 	if [[ $DEBUGMODE = "1" ]]; then
-		echo "ListIPSets: "$ListIPSets
+		echo "ParseIPSets: "$ParseIPSets
 	fi
-	IPSETNAMES=$(echo "$ListIPSets" | jq '.Name' | cut -d \" -f2)
-	IPSETIDS=$(echo "$ListIPSets" | jq '.IPSetId' | cut -d \" -f2)
+	IPSETNAMES=$(echo "$ParseIPSets" | jq '.Name' | cut -d \" -f2)
+	if [ ! $? -eq 0 ]; then
+		fail "$IPSETNAMES"
+	fi
+	IPSETIDS=$(echo "$ParseIPSets" | jq '.IPSetId' | cut -d \" -f2)
+	if [ ! $? -eq 0 ]; then
+		fail "$IPSETIDS"
+	fi
 	TOTALIPSETS=$(echo "$IPSETIDS" | wc -l | rev | cut -d " " -f1 | rev)
+	if [ ! $? -eq 0 ]; then
+		fail "$TOTALIPSETS"
+	fi
 
 	HorizontalRule
 	echo "IP Sets Found:" $TOTALIPSETS
@@ -83,19 +96,19 @@ function ListIPSets(){
 	echo
 
 	if [[ $DEBUGMODE = "1" ]]; then
-		echo "$IPSETNAMES"
-		echo "$IPSETIDS"
+		echo "IPSETNAMES: $IPSETNAMES"
+		echo "IPSETIDS: $IPSETIDS"
 	fi
 }
 
 # Get a single IP Set
 function GetIPSet(){
 	GetIPSet=$(aws waf get-ip-set --ip-set-id "$IPSETID" --output=json --profile $profile 2>&1)
-	if echo $GetIPSet | egrep -iq "error|not"; then
+	if [ ! $? -eq 0 ]; then
 		fail "$GetIPSet"
 	fi
 	if [[ $DEBUGMODE = "1" ]]; then
-		echo "GetIPSet: "$GetIPSet
+		echo "GetIPSet: $GetIPSet"
 	fi
 }
 
@@ -104,10 +117,14 @@ function ExportExistingIPSet(){
 	ListIPSets
 
 	# Make the subfolder directory
-	if ! [ -d $SUBFOLDER ]; then
-		echo "Making Subfolder:" $SUBFOLDER
+	if ! [ -d "$SUBFOLDER" ]; then
 		echo
-		mkdir $SUBFOLDER
+		echo "Making Subfolder: $SUBFOLDER"
+		echo
+		MKDIR=$(mkdir "$SUBFOLDER")
+		if [ ! $? -eq 0 ]; then
+			fail "$MKDIR"
+		fi
 	fi
 
 	START=1
@@ -115,10 +132,10 @@ function ExportExistingIPSet(){
 	do
 		IPSETID=$(echo "$IPSETIDS" | nl | grep -w [^0-9][[:space:]]$COUNT | cut -f2)
 		IPSETNAME=$(echo "$IPSETNAMES" | nl | grep -w [^0-9][[:space:]]$COUNT | cut -f2)
-		echo "Exporting IP Set:" $IPSETNAME
+		echo "Exporting IP Set: $IPSETNAME"
 		GetIPSet
-		OUTPUTFILENAME=$SUBFOLDER/$IPSETID.json
-		echo "$GetIPSet" > $OUTPUTFILENAME
+		OUTPUTFILENAME="$SUBFOLDER"/"$IPSETID".json
+		echo "$GetIPSet" > "$OUTPUTFILENAME"
 	done
 	completed
 	echo "JSON exports generated under subfolder: $SUBFOLDER"
