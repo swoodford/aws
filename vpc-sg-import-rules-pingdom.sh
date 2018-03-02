@@ -16,7 +16,7 @@ FROMPORT="80"
 TOPORT="443"
 
 # Debug Mode
-DEBUGMODE="0"
+DEBUGMODE="1"
 
 
 # Functions
@@ -77,6 +77,9 @@ fi
 # Get Pingdom IPv4 IPs
 # https://help.pingdom.com/hc/en-us/articles/203682601-How-to-get-all-Pingdom-probes-public-IP-addresses
 function probeIPs(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function probeIPs"
+	fi
 	wget --quiet -O- https://www.pingdom.com/rss/probe_servers.xml | \
 	perl -nle 'print $1 if /IP: (([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5]));/' | \
 	sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 | \
@@ -96,6 +99,9 @@ function probeIPs(){
 
 # Create Security Group
 function createGroup(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function createGroup"
+	fi
 	echo
 	HorizontalRule
 	echo "Creating Security Group: "$GROUPNAME
@@ -114,6 +120,9 @@ function createGroup(){
 
 # Builds the JSON for 50 rules or less
 function buildJSON0(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function buildJSON0"
+	fi
 	(
 	cat << EOP
 {
@@ -175,6 +184,9 @@ EOP
 
 # Builds the JSON for 51-100 rules
 function buildJSON50(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function buildJSON50"
+	fi
 	(
 	cat << EOP
 {
@@ -297,6 +309,9 @@ EOP
 
 # Builds the JSON for 101-150 rules
 function buildJSON100(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function buildJSON100"
+	fi
 	(
 	cat << EOP
 {
@@ -477,6 +492,9 @@ EOP
 
 # Request ingress authorization to a security group from JSON file
 function AuthorizeSecurityGroupIngress(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function AuthorizeSecurityGroupIngress"
+	fi
 	if ! [ -f json ]; then
 		fail "Error building JSON."
 	else
@@ -492,6 +510,9 @@ function AuthorizeSecurityGroupIngress(){
 
 # Create one group with 50 rules or less
 function group0(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function group0"
+	fi
 	createGroup
 	echo
 	buildJSON0
@@ -501,6 +522,9 @@ function group0(){
 
 # Create multiple groups for 51-100 rules
 function group50(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function group50"
+	fi
 	# Set Variables for Group #1
 	FIRSTGROUPNAME="$GROUPNAME 1"
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -550,6 +574,9 @@ function group50(){
 
 # Create multiple groups for 101-150 rules
 function group100(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function group100"
+	fi
 	# Set Variables for Group #1
 	FIRSTGROUPNAME="$GROUPNAME 1"
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -618,14 +645,17 @@ function group100(){
 
 # Validate VPC ID
 function validateVPCID(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function validateVPCID"
+	fi
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
 		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
-		if echo $DESCRIBEVPCS | egrep -q "Error|error|not"; then
+		if echo $DESCRIBEVPCS | egrep -iq "error|not"; then
 			fail "$DESCRIBEVPCS"
 		fi
 		NUMVPCS=$(echo $DESCRIBEVPCS | jq '.Vpcs | length')
-		if echo $NUMVPCS | egrep -q "Error|error|not|invalid"; then
+		if echo $NUMVPCS | egrep -iq "error|not|invalid"; then
 			fail "$NUMVPCS"
 		fi
 
@@ -633,13 +663,16 @@ function validateVPCID(){
 		if [ "$NUMVPCS" -eq "1" ]; then
 			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
 		else
-			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1 | jq '.Vpcs | .[] | .VpcId')
-			if echo $FOUNDVPCS | egrep -q "Error|error|not|invalid"; then
+			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1 | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if echo $FOUNDVPCS | egrep -iq "error|not|invalid"; then
 				fail "$FOUNDVPCS"
 			fi
-			echo "Found VPCs:" $FOUNDVPCS
+			HorizontalRule
+			echo "Found VPCs:"
+			HorizontalRule
+			echo "$FOUNDVPCS"
 			echo
-			read -r -p "Please specify VPC ID (ex. vpc-12345678): " VPCID
+			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
 			if [ -z "$VPCID" ]; then
 				fail "Must specify a valid VPC ID."
 			fi
@@ -658,9 +691,12 @@ function validateVPCID(){
 
 # Confirm the group with this name does not already exist in the VPC
 function validateGroupName(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function validateGroupName"
+	fi
 	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
-	if echo "$validateGroupName" | egrep -q "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
-		echo Warning: Security Group $(echo "$validateGroupName" | egrep "\b$GROUPNAME\b|\b$GROUPNAME 1\b") already exists in specified VPC.
+	if echo "$validateGroupName" | egrep -iq "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
+		echo Warning: Security Group $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b") already exists in specified VPC.
 	fi
 }
 

@@ -1,65 +1,184 @@
 #!/usr/bin/env bash
 
-# Create VPC Security Group with Cloudfront IP ranges
+# Create VPC Security Group with CloudFront IP ranges
 
 # Get current list of Cloudfront IP ranges
-IPLIST=$(curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | jq '.prefixes | .[] | select(.service=="CLOUDFRONT") | .ip_prefix' | cut -d '"' -f2)
+IPLIST=$(curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | jq '.prefixes | .[] | select(.service=="CLOUDFRONT") | .ip_prefix' | cut -d \" -f2)
 
 # Set Variables
-GROUPNAME="Cloudfront"
-DESCR="Cloudfront IP Ranges"
-VPCID=$(aws ec2 describe-vpcs --output=json | jq '.Vpcs | .[] | .VpcId' | cut -d '"' -f2)
+GROUPNAME="CloudFront99"
+DESCR="CloudFront IP Ranges"
+VPCID="YOUR-VPC-ID-HERE"
 PROTO="tcp"
 PORT="80"
 TOTALIPS=$(echo "$IPLIST" | wc -l)
 
-# Functions
-function pause(){
-	read -n 1 -s -p "Press any key to continue..."
-	echo
-}
 
+# Debug Mode
+DEBUGMODE="0"
+
+
+# Functions
+
+# Check Command
 function check_command {
 	type -P $1 &>/dev/null || fail "Unable to find $1, please install it and run this script again."
 }
 
+# Completed
+function completed(){
+	echo
+	HorizontalRule
+	tput setaf 2; echo "Completed!" && tput sgr0
+	HorizontalRule
+	echo
+}
+
+# Fail
 function fail(){
 	tput setaf 1; echo "Failure: $*" && tput sgr0
 	exit 1
 }
 
-function addRules (){
+# Horizontal Rule
+function HorizontalRule(){
+	echo "============================================================"
+}
+
+# Pause
+function pause(){
+	echo
+	read -n 1 -s -p "Press any key to continue..."
+	echo
+	echo
+}
+
+# Verify AWS CLI Credentials are setup
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
+if ! grep -q aws_access_key_id ~/.aws/config; then
+	if ! grep -q aws_access_key_id ~/.aws/credentials; then
+		fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
+	fi
+fi
+
+# Check for AWS CLI profile argument passed into the script
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
+if [ $# -eq 0 ]; then
+	scriptname=`basename "$0"`
+	echo "Usage: ./$scriptname profile"
+	echo "Where profile is the AWS CLI profile name"
+	echo "Using default profile"
+	echo
+	profile=default
+else
+	profile=$1
+fi
+
+# Validate VPC ID
+function validateVPCID(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function validateVPCID"
+	fi
+	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
+		# Count number of VPCs
+		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		if echo $DESCRIBEVPCS | egrep -q "Error|error|not"; then
+			fail "$DESCRIBEVPCS"
+		fi
+		NUMVPCS=$(echo $DESCRIBEVPCS | jq '.Vpcs | length')
+		if echo $NUMVPCS | egrep -q "Error|error|not|invalid"; then
+			fail "$NUMVPCS"
+		fi
+
+		# If only one VPC, use that ID
+		if [ "$NUMVPCS" -eq "1" ]; then
+			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+		else
+			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1 | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if echo $FOUNDVPCS | egrep -q "Error|error|not|invalid"; then
+				fail "$FOUNDVPCS"
+			fi
+			HorizontalRule
+			echo "Found VPCs:"
+			HorizontalRule
+			echo "$FOUNDVPCS"
+			echo
+			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
+			if [ -z "$VPCID" ]; then
+				fail "Must specify a valid VPC ID."
+			fi
+		fi
+	fi
+
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
+
+	# Test for error
+	if ! echo "$CHECKVPC" | grep -q "available"; then
+		fail $CHECKVPC
+	else
+		tput setaf 2; echo "VPC ID Validated" && tput sgr0
+	fi
+}
+
+function addRules(){
 	# Check for existing security group or create new one
-	if ! aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | .GroupName' | grep -q Cloudfront; then
+	CHECKGROUP=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$CHECKGROUP"
+	fi
+	if ! echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | .GroupName' | egrep -iq "$GROUPNAME"; then
 		echo
-		echo "====================================================="
+		HorizontalRule
 		echo "Creating Security Group "$GROUPNAME
-		GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID)
-		echo $GROUPID
-		aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
-		echo "====================================================="
+		GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$GROUPID"
+		else
+			GROUPID=$(echo "$GROUPID" | jq '.GroupId' | cut -d \" -f2)
+		fi
+		echo "ID: $GROUPID"
+		TAGS=$(aws ec2 create-tags --resources "$GROUPID" --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$TAGS"
+		fi
+		HorizontalRule
 	else
 		echo
-		echo "====================================================="
+		HorizontalRule
 		echo "Group $GROUPNAME Already Exists"
-		GROUPID=$(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2)
+		CHECKGROUP=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$CHECKGROUP"
+		fi
+		GROUPID=$(echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME'") | .GroupId' | cut -d \" -f2)
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo DEBUG GROUPID: "$GROUPID"
+		fi
 		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
 		if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
 			echo
-			echo "====================================================="
+			HorizontalRule
 			echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
-			echo "====================================================="
-			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" 2>&1)
+			HorizontalRule
+			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
 			if echo $DELETEGROUP | grep -q error; then
 				fail $DELETEGROUP
 			else
 				echo
-				echo "====================================================="
+				HorizontalRule
 				echo "Creating Security Group "$GROUPNAME
-				GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID)
-				echo $GROUPID
-				aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="Cloudfront") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
-				echo "====================================================="
+				GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID --profile $profile 2>&1)
+				if [ ! $? -eq 0 ]; then
+					fail "$GROUPID"
+				else
+					GROUPID=$(echo "$GROUPID" | jq '.GroupId' | cut -d \" -f2)
+				fi
+				echo "ID: $GROUPID"
+				TAGS=$(aws ec2 create-tags --resources "$GROUPID" --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
+				if [ ! $? -eq 0 ]; then
+					fail "$TAGS"
+				fi
+				HorizontalRule
 			fi
 		else
 			echo "Exiting"
@@ -68,41 +187,30 @@ function addRules (){
 	fi
 	echo
 	echo
-	echo "====================================================="
+	HorizontalRule
 	echo "Adding rules to VPC Security Group "$GROUPNAME
 	echo "Records to be created: "$TOTALIPS
-	echo "====================================================="
+	HorizontalRule
 	echo
 	for ip in $IPLIST
 	do
-		RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --protocol $PROTO --port $PORT --cidr "$ip" 2>&1)
+		RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --protocol $PROTO --port $PORT --cidr "$ip" --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$RESULT"
+		fi
 		# Check for errors
 		if echo $RESULT | grep -q error; then
 			fail $RESULT
 		# else echo $RESULT
 		fi
 	done
-	echo "====================================================="
-	echo
-	tput setaf 2; echo "Completed!" && tput sgr0
-	echo
+	completed
 }
 
-# Ensure Variables are set
-if [ "$VPCID" = "YOUR-VPC-ID-HERE" ]; then
-	fail "Failed to set variables!"
-fi
-
-# Verify AWS CLI Credentials are setup
-# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-if ! grep -q aws_access_key_id ~/.aws/credentials; then
-	if ! grep -q aws_access_key_id ~/.aws/config; then
-		fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
-	fi
-fi
 
 # Check required commands
 check_command "curl"
 check_command "jq"
 
+validateVPCID
 addRules
