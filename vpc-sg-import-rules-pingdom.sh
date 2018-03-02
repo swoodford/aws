@@ -16,7 +16,7 @@ FROMPORT="80"
 TOPORT="443"
 
 # Debug Mode
-DEBUGMODE="1"
+DEBUGMODE="0"
 
 
 # Functions
@@ -693,10 +693,42 @@ function validateVPCID(){
 function validateGroupName(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "function validateGroupName"
+		echo "GROUPNAME $GROUPNAME"
 	fi
 	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
 	if echo "$validateGroupName" | egrep -iq "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
-		echo Warning: Security Group $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b") already exists in specified VPC.
+		fail Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b") already exists in specified VPC.
+
+		# TODO: This part is too complicated to handle smoothly...
+		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
+		if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
+
+			CHECKGROUP=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1)
+			if [ ! $? -eq 0 ]; then
+				fail "$CHECKGROUP"
+			fi
+			GROUPID=$(echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME'") | .GroupId' | cut -d \" -f2)
+
+			if [[ -z $GROUPID ]]; then
+				GROUPID=$(echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME' 1") | .GroupId' | cut -d \" -f2)
+			fi
+			if [[ $DEBUGMODE = "1" ]]; then
+				echo DEBUG GROUPID: "$GROUPID"
+			fi
+			echo
+			HorizontalRule
+			echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
+			HorizontalRule
+			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
+			if echo $DELETEGROUP | grep -q error; then
+				fail $DELETEGROUP
+			fi
+		else
+			echo "Exiting"
+			exit 1
+		fi
+
+
 	fi
 }
 
