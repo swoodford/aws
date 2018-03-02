@@ -2,11 +2,11 @@
 
 # Create VPC Security Group with CloudFront IP ranges
 
-# Get current list of Cloudfront IP ranges
+# Get current list of CloudFront IP ranges
 IPLIST=$(curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | jq '.prefixes | .[] | select(.service=="CLOUDFRONT") | .ip_prefix' | cut -d \" -f2)
 
 # Set Variables
-GROUPNAME="CloudFront99"
+GROUPNAME="CloudFront"
 DESCR="CloudFront IP Ranges"
 VPCID="YOUR-VPC-ID-HERE"
 PROTO="tcp"
@@ -197,11 +197,6 @@ function addRules(){
 		RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --protocol $PROTO --port $PORT --cidr "$ip" --profile $profile 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$RESULT"
-		fi
-		# Check for errors
-		if echo $RESULT | grep -q error; then
-			fail $RESULT
-		# else echo $RESULT
 		fi
 	done
 	completed
