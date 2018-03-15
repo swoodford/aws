@@ -69,6 +69,7 @@ Debian/Ubuntu:
 
 ![cloudfront](/images/cf.png)
 #### CloudFront
+- **[cloudfront-inprogress-status.sh](cloudfront-inprogress-status.sh)** Checks CloudFront Distributions with In-Progress status to complete and become Deployed
 - **[cloudfront-invalidation-status.sh](cloudfront-invalidation-status.sh)** Checks CloudFront Distributions for cache invalidation status to complete
 
 ![cloudwatch](/images/cw.png)
