@@ -108,7 +108,7 @@ Debian/Ubuntu:
 - **[s3-buckets-security-audit.sh](s3-buckets-security-audit.sh)** Export S3 bucket ACL, CORS, Policy and Website as JSON for auditing security of all buckets
 - **[s3-buckets-total-file-size.sh](s3-buckets-file-size-s3api.sh)** Count total size of all data stored in all S3 buckets using [s3api](https://docs.aws.amazon.com/cli/latest/reference/s3api/index.html)
 - **[s3-fix-content-type-metadata.sh](s3-fix-content-type-metadata.sh)** Safely fix invalid content-type metadata on AWS S3 bucket website assets for some common filetypes
-- **[s3-openbucketpolicy.sh](s3-openbucketpolicy.sh)** Set an S3 bucket policy to allow GetObject requests from any IP address
+- **[s3-open-bucket-policy.sh](s3-openbucketpolicy.sh)** Set an S3 bucket policy to allow GetObject requests from any IP address (publicly accessible website)
 - **[s3-remove-glacier-objects.sh](s3-remove-glacier-objects.sh)** Delete all Glacier storage type objects in a single S3 bucket
 - **[s3-restrictbucketpolicy.sh](s3-restrictbucketpolicy.sh)** Set an S3 bucket policy to only allow GetObject requests from an IP whitelist file named iplist
 - **[s3-setup-buckets.sh](s3-setup-buckets.sh)** Create S3 buckets, set CORS config and tag bucket with client name
