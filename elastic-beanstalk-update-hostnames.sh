@@ -1,20 +1,41 @@
 #!/usr/bin/env bash
+
 # This script updates the hostname on Elastic Beanstalk servers with their environment name and IP address
 # It also will restart New Relic monitoring if present
-# Requires jq
+# Requires the AWS CLI and jq
+
+
+# Set Variables
+
+# Debug Mode
+DEBUGMODE="0"
 
 
 # Functions
 
-# Check required commands
+# Check Command
 function check_command {
 	type -P $1 &>/dev/null || fail "Unable to find $1, please install it and run this script again."
+}
+
+# Completed
+function completed(){
+	echo
+	HorizontalRule
+	tput setaf 2; echo "Completed!" && tput sgr0
+	HorizontalRule
+	echo
 }
 
 # Fail
 function fail(){
 	tput setaf 1; echo "Failure: $*" && tput sgr0
 	exit 1
+}
+
+# Horizontal Rule
+function HorizontalRule(){
+	echo "============================================================"
 }
 
 # Pause
@@ -25,53 +46,74 @@ function pause(){
 
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-if ! grep -q aws_access_key_id ~/.aws/credentials; then
-	if ! grep -q aws_access_key_id ~/.aws/config; then
+if ! grep -q aws_access_key_id ~/.aws/config; then
+	if ! grep -q aws_access_key_id ~/.aws/credentials; then
 		fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
 	fi
 fi
 
+# Check for AWS CLI profile argument passed into the script
+# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
+if [ $# -eq 0 ]; then
+	scriptname=`basename "$0"`
+	echo "Usage: ./$scriptname profile"
+	echo "Where profile is the AWS CLI profile name"
+	echo "Using default profile"
+	echo
+	profile=default
+else
+	profile=$1
+fi
+
+# Check required commands
+check_command "aws"
+check_command "jq"
+
 # Get Elastic Beanstalk Environments
 function ebenvironments(){
-	ebenvironments=$(aws elasticbeanstalk describe-environments | jq '.Environments | .[] | .EnvironmentName' | cut -d \" -f2 2>&1)
+	ebenvironments=$(aws elasticbeanstalk describe-environments --output=json --profile $profile 2>&1 | jq '.Environments | .[] | .EnvironmentName' | cut -d \" -f2)
 	if [ -z "$ebenvironments" ]; then
 		fail "No Elastic Beanstalk Environments found."
 	fi
 	echo "EB Environments Found:"
-	echo "----------------------"
+	HorizontalRule
 	echo "$ebenvironments"
-	echo "----------------------"
+	HorizontalRule
 }
 
 # Get Elastic Beanstalk Environment Resources
 function ebresources(){
 	while IFS= read -r ebenvironments
 	do
-		ebresources=$(aws elasticbeanstalk describe-environment-resources --environment-name $ebenvironments | jq '.EnvironmentResources | .Instances | .[] | .Id' | cut -d \" -f2 2>&1)
+		ebresources=$(aws elasticbeanstalk describe-environment-resources --environment-name $ebenvironments --output=json --profile $profile 2>&1 | jq '.EnvironmentResources | .Instances | .[] | .Id' | cut -d \" -f2)
 		if [ -z "$ebresources" ]; then
 			fail "No Elastic Beanstalk Environment Resources found."
 		fi
 		echo "EB Server IDs Found for Environment $ebenvironments:"
-		echo "----------------------------------------------------"
+		HorizontalRule
 		echo "$ebresources"
-		echo "----------------------------------------------------"
+		HorizontalRule
 
 		ebresourcescount=$(echo "$ebresources" | wc -l)
-		# echo ebresourcescount
-		# echo "$ebresourcescount"
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo ebresourcescount "$ebresourcescount"
+		fi
 		ebresourceslist=$(echo "$ebresources" | nl)
-		# echo ebresourceslist
-		# echo "$ebresourceslist"
-
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo ebresourceslist "$ebresourceslist"
+		fi
 		# Get IP Address
 		START=1
-		# echo "Getting IP for" $ebresourcescount "instance(s)."
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "Getting IP for" $ebresourcescount "instance(s)."
+		fi
 		for (( COUNT=$START; COUNT<=$ebresourcescount; COUNT++ ))
 		do
 			currentinstanceid=$(echo "$ebresourceslist" | grep -w [^0-9][[:space:]]$COUNT | cut -f2)
-			# echo $currentinstanceid
-			# echo Getting IP for Instance ID: $currentinstanceid
-			getipaddr=$(aws ec2 describe-instances --instance-ids "$currentinstanceid" --query 'Reservations[*].Instances[*].PublicIpAddress' | jq '.[] | .[]' | cut -d \" -f2 2>&1)
+			if [[ $DEBUGMODE = "1" ]]; then
+				echo Getting IP for Instance ID: $currentinstanceid
+			fi
+			getipaddr=$(aws ec2 describe-instances --instance-ids "$currentinstanceid" --query 'Reservations[*].Instances[*].PublicIpAddress' --output=json --profile $profile 2>&1 | jq '.[] | .[]' | cut -d \" -f2)
 			echo IP Address: "$getipaddr"
 			# Set Hostname
 			echo '#!/usr/bin/env bash' >> sethostname.sh
@@ -81,13 +123,14 @@ function ebresources(){
 			chmod +x sethostname.sh
 			uploadhostnamescript=$(scp -o StrictHostKeyChecking=no sethostname.sh $getipaddr:~)
 			sethostname=$(ssh -n $getipaddr '(./sethostname.sh)')
-			# echo "$sethostname"
+			if [[ $DEBUGMODE = "1" ]]; then
+				echo "$sethostname"
+			fi
 			rm sethostname.sh
 		done
 	done <<< "$ebenvironments"
+	completed
 }
-
-check_command "jq"
 
 ebenvironments
 # ebenvironments="set one environment here to override the lookup"
