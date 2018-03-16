@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# This script sets an S3 bucket policy to only allow GetObject requests from an IP whitelist file named iplist
 
-# Variables
+# This script sets an S3 bucket policy to only allow GetObject requests from an IP whitelist file named iplist
+# Requires the AWS CLI and jq
+
+# Set Variables
 
 s3bucketname="YOUR-S3-BUCKET-NAME"
 
@@ -19,13 +21,33 @@ function fail(){
 	exit 1
 }
 
+# Horizontal Rule
+function HorizontalRule(){
+	echo "============================================================"
+}
+
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-if ! [ -f ~/.aws/config ]; then
-  if ! [ -f ~/.aws/credentials ]; then
-    fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
-  fi
+if ! grep -q aws_access_key_id ~/.aws/config; then
+	if ! grep -q aws_access_key_id ~/.aws/credentials; then
+		fail "AWS config not found or CLI not installed. Please run \"aws configure\"."
+	fi
 fi
+
+# Check required commands
+check_command "aws"
+check_command "jq"
+
+
+# Validate Variables
+
+if [ "$s3bucketname" = "YOUR-S3-BUCKET-NAME" ]; then
+	read -r -p "Enter S3 Bucket Name: " s3bucketname
+fi
+if [ -z "$s3bucketname" ]; then
+	fail "S3 Bucket Name must be set."
+fi
+
 
 # Validates CIDR notation
 function validateCIDR {
@@ -51,7 +73,7 @@ function validateCIDR {
 		fi
 	done < iplist
 	mv iplist4 iplist
-	
+
 	if grep -qv '/[0-9]' iplist; then
 		echo "One or more lines contain invalid or missing CIDR notation. Please fix line:"
 		grep -vn '/[0-9]' iplist
@@ -129,10 +151,10 @@ function validateS3Policy {
 	# echo "$jsonpolicy" > jsonpolicy
 
 	if [ "$bucketpolicy" = "$jsonpolicy" ]; then
-		echo "==========================================================="
+		HorizontalRule
 		tput setaf 2; echo S3 Bucket: $s3bucketname Policy Set Successfully! && tput sgr0
 		tput setaf 2; echo Set Conditional IP Allow List && tput sgr0
-		echo "==========================================================="
+		HorizontalRule
 		# rm policy.json
 	else
 		fail $(echo "$setS3Policy")
@@ -192,12 +214,6 @@ function setBucketName (){
 	fi
 	# echo $s3bucketname
 }
-
-check_command "jq"
-
-if [ "$s3bucketname" = "YOUR-S3-BUCKET-NAME" ]; then
-	fail "You must set your S3 bucket name in the script variables."
-fi
 
 # validateCIDR
 newValidateCIDR
