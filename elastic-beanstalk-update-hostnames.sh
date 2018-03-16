@@ -71,7 +71,11 @@ check_command "jq"
 
 # Get Elastic Beanstalk Environments
 function ebenvironments(){
-	ebenvironments=$(aws elasticbeanstalk describe-environments --output=json --profile $profile 2>&1 | jq '.Environments | .[] | .EnvironmentName' | cut -d \" -f2)
+	describeenvironments=$(aws elasticbeanstalk describe-environments --output=json --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$describeenvironments"
+	fi
+	ebenvironments=$(echo "$describeenvironments" | jq '.Environments | .[] | .EnvironmentName' | cut -d \" -f2)
 	if [ -z "$ebenvironments" ]; then
 		fail "No Elastic Beanstalk Environments found."
 	fi
@@ -85,7 +89,11 @@ function ebenvironments(){
 function ebresources(){
 	while IFS= read -r ebenvironments
 	do
-		ebresources=$(aws elasticbeanstalk describe-environment-resources --environment-name $ebenvironments --output=json --profile $profile 2>&1 | jq '.EnvironmentResources | .Instances | .[] | .Id' | cut -d \" -f2)
+		describeebresources=$(aws elasticbeanstalk describe-environment-resources --environment-name $ebenvironments --output=json --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$describeebresources"
+		fi
+		ebresources=$(echo "$describeebresources" | jq '.EnvironmentResources | .Instances | .[] | .Id' | cut -d \" -f2)
 		if [ -z "$ebresources" ]; then
 			fail "No Elastic Beanstalk Environment Resources found."
 		fi
@@ -105,16 +113,20 @@ function ebresources(){
 		# Get IP Address
 		START=1
 		if [[ $DEBUGMODE = "1" ]]; then
-			echo "Getting IP for" $ebresourcescount "instance(s)."
+			echo "Getting IP for $ebresourcescount instance(s)."
 		fi
 		for (( COUNT=$START; COUNT<=$ebresourcescount; COUNT++ ))
 		do
 			currentinstanceid=$(echo "$ebresourceslist" | grep -w [^0-9][[:space:]]$COUNT | cut -f2)
 			if [[ $DEBUGMODE = "1" ]]; then
-				echo Getting IP for Instance ID: $currentinstanceid
+				echo "Getting IP for Instance ID: $currentinstanceid"
 			fi
-			getipaddr=$(aws ec2 describe-instances --instance-ids "$currentinstanceid" --query 'Reservations[*].Instances[*].PublicIpAddress' --output=json --profile $profile 2>&1 | jq '.[] | .[]' | cut -d \" -f2)
-			echo IP Address: "$getipaddr"
+			describeinstances=$(aws ec2 describe-instances --instance-ids "$currentinstanceid" --query 'Reservations[*].Instances[*].PublicIpAddress' --output=json --profile $profile 2>&1)
+			if [ ! $? -eq 0 ]; then
+				fail "$describeinstances"
+			fi
+			getipaddr=$(echo "$describeinstances" | jq '.[] | .[]' | cut -d \" -f2)
+			echo "IP Address: $getipaddr"
 			# Set Hostname
 			echo '#!/usr/bin/env bash' >> sethostname.sh
 			echo "sudo sed -i 's/Defaults    requiretty/#Defaults    requiretty/g' /etc/sudoers" >> sethostname.sh
