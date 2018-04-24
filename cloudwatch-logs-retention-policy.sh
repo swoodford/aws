@@ -65,7 +65,6 @@ if [ $# -eq 0 ]; then
 	profile=default
 else
 	profile=$1
-	SUBFOLDER=$SUBFOLDER-$1
 fi
 
 # Check required commands
