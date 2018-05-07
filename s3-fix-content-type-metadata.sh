@@ -100,7 +100,7 @@ else
 	echo "$jpg"
 fi
 message JPEG
-jpeg=$(aws s3 cp --recursive s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpeg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
+jpeg=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpeg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
 if echo $jpeg | grep -q error; then
 	fail "$jpeg"
 else
