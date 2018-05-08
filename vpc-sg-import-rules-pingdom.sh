@@ -12,7 +12,7 @@ DESCRIPTION="Pingdom Probe Servers"
 VPCID="YOUR-VPC-ID-HERE"
 PROTOCOL="tcp"
 # If allowing only one port use the same port number for both from and to vars below
-FROMPORT="80"
+FROMPORT="443"
 TOPORT="443"
 
 # Debug Mode
@@ -697,7 +697,7 @@ function validateGroupName(){
 	fi
 	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
 	if echo "$validateGroupName" | egrep -iq "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
-		fail Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b") already exists in specified VPC.
+		fail Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b" | sort) already exist in specified VPC.
 
 		# TODO: This part is too complicated to handle smoothly...
 		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
