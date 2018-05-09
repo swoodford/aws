@@ -321,7 +321,14 @@ function AuthorizeSecurityGroupIngress(){
 	else
 		json=$(cat json)
 	fi
+	HorizontalRule
+	echo "Adding rules to security groups..."
+	HorizontalRule
+	echo
 	AUTHORIZE=$(aws ec2 authorize-security-group-ingress --cli-input-json "$json" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$AUTHORIZE"
+	fi
 	if echo $AUTHORIZE | grep -q error; then
 		fail "$AUTHORIZE"
 	fi
@@ -496,19 +503,19 @@ function deleteIPs(){
 
 	echo
 	HorizontalRule
-	echo "Removing IPs from Group Name $GROUPNAME 1, Security Group ID $SGID1"
+	echo "Removing IPs from $GROUPNAME 1, Security Group ID $SGID1"
 	RemoveGroup1IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID1" --profile $profile --ip-permissions "$Group1IPs" 2>&1)
 	HorizontalRule
 
 	echo
 	HorizontalRule
-	echo "Removing IPs from Group Name $GROUPNAME 2, Security Group ID $SGID2"
+	echo "Removing IPs from $GROUPNAME 2, Security Group ID $SGID2"
 	RemoveGroup2IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID2" --profile $profile --ip-permissions "$Group2IPs" 2>&1)
 	HorizontalRule
 
 	echo
 	HorizontalRule
-	echo "Removing IPs from Group Name $GROUPNAME 3, Security Group ID $SGID3"
+	echo "Removing IPs from $GROUPNAME 3, Security Group ID $SGID3"
 	RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --profile $profile --ip-permissions "$Group3IPs" 2>&1)
 	HorizontalRule
 
@@ -525,10 +532,11 @@ validateVPCID
 
 echo
 HorizontalRule
-echo "This script will create or update AWS VPC Security Groups with rules to allow access to each Pingdom probe IP in the port range specified."
+echo "This script will create or update AWS VPC Security Groups with rules"
+echo "to allow access to each Pingdom probe IP in the port range specified."
 HorizontalRule
 echo
-tput setaf 1; echo "Please verify all settings before continuing..." && tput sgr0
+tput setaf 1; echo "Please review all settings before continuing..." && tput sgr0
 echo
 echo "AWS CLI Profile Name: "$profile
 echo "Group Name: "$GROUPNAME
