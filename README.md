@@ -120,8 +120,7 @@ Debian/Ubuntu:
 - **[vpc-sg-import-rules.sh](vpc-sg-import-rules.sh)** Create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 - **[vpc-sg-import-rules-cloudflare.sh](vpc-sg-import-rules-cloudflare.sh)** Create VPC Security Group with [Cloudflare](https://www.cloudflare.com/) IP ranges
 - **[vpc-sg-import-rules-cloudfront.sh](vpc-sg-import-rules-cloudfront.sh)** Create VPC Security Group with CloudFront IP ranges
-- **[vpc-sg-import-rules-pingdom.sh](vpc-sg-import-rules-pingdom.sh)** Create VPC Security Group with [Pingdom](https://www.pingdom.com/) probe server IP ranges
-- **[vpc-sg-update-rules-pingdom.sh](vpc-sg-update-rules-pingdom.sh)** Update existing AWS VPC Security Groups with new IP rules to allow access to each [Pingdom](https://www.pingdom.com/) probe server IP at the port specified
+- **[vpc-sg-import-rules-pingdom.sh](vpc-sg-import-rules-pingdom.sh)** Create or Update VPC Security Groups with [Pingdom](https://www.pingdom.com/) probe server IP ranges
 
 ![waf](/images/waf.png)
 #### WAF

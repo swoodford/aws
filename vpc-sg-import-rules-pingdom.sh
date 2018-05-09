@@ -2,8 +2,14 @@
 
 # This script will save a list of current Pingdom IPv4 probe server IPs in the file pingdom-probe-servers.txt
 # Then create an AWS VPC Security Group with rules to allow access to each IP at the port specified.
-# Due to AWS limits a group can only have 50 rules. This script will create multiple groups if greater than 50 rules.
-# Supports up to 150 rules
+
+# Pingdom currently has 109 IPv4 probe IPs. Due to AWS limits a security group can only have 50 rules,
+# Therefore three groups will be needed to contain all IPs for Pingdom probes.
+
+# If security groups have already been created for Pingdom, the script will remove all the IP rules and
+# add new rules to the same groups so they are not deleted and groups are still assigned to your resources.
+
+# This script currently supports up to 150 probe IPs (three security groups).
 # Requires the AWS CLI, jq, wget, perl
 
 # Set Variables
@@ -12,7 +18,7 @@ DESCRIPTION="Pingdom Probe Servers"
 VPCID="YOUR-VPC-ID-HERE"
 PROTOCOL="tcp"
 # If allowing only one port use the same port number for both from and to vars below
-FROMPORT="443"
+FROMPORT="80"
 TOPORT="443"
 
 # Debug Mode
@@ -29,8 +35,11 @@ function pause(){
 }
 
 # Check Command
-function check_command {
-	type -P $1 &>/dev/null || fail "Unable to find $1, please install it and run this script again."
+function check_command(){
+	for command in "$@"
+	do
+	    type -P $command &>/dev/null || fail "Unable to find $command, please install it and run this script again."
+	done
 }
 
 # Completed
@@ -97,215 +106,28 @@ function probeIPs(){
 	echo
 }
 
-# Create Security Group
-function createGroup(){
+# Create Security Groups
+function createGroups(){
 	if [[ $DEBUGMODE = "1" ]]; then
-		echo "function createGroup"
+		echo "function createGroups"
+		echo var1: "$1"
+		echo var2: "$2"
 	fi
 	echo
 	HorizontalRule
-	echo "Creating Security Group: "$GROUPNAME
-	SGID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+	echo "Creating Security Group: "$1
+	SGID=$(aws ec2 create-security-group --group-name "$1" --description "$2" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
 	if echo $SGID | grep -q "error"; then
 		fail "$SGID"
 	fi
 	echo "Security Group ID:" $SGID
-	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
+	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$1" --profile $profile 2>&1)
 	if echo $TAG | grep -q "error"; then
 		fail "$TAG"
 	fi
 	HorizontalRule
 	echo
 }
-
-# Builds the JSON for 50 rules or less
-function buildJSON0(){
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "function buildJSON0"
-	fi
-	(
-	cat << EOP
-{
-    "GroupId": "$SGID",
-    "IpPermissions": [
-        {
-            "IpProtocol": "$PROTOCOL",
-            "FromPort": $FROMPORT,
-            "ToPort": $TOPORT,
-            "IpRanges": [
-EOP
-	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json1
-	fi
-	rm -f json2
-
-	START=1
-	for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
-	do
-	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-	(
-	cat << EOP
-                {
-                    "CidrIp": "$iplist/32"
-                },
-EOP
-	) >> json2
-	done
-
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json2
-	fi
-
-	# Remove the last comma to close JSON array
-	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json3
-	fi
-
-	(
-	cat << 'EOP'
-            ]
-        }
-    ]
-}
-EOP
-	) > json4
-
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json4
-	fi
-
-	cat json1 json3 json4 > json
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json
-	fi
-}
-
-# Builds the JSON for 51-100 rules
-function buildJSON50(){
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "function buildJSON50"
-	fi
-	(
-	cat << EOP
-{
-    "GroupId": "$SGID1",
-    "IpPermissions": [
-        {
-            "IpProtocol": "$PROTOCOL",
-            "FromPort": $FROMPORT,
-            "ToPort": $TOPORT,
-            "IpRanges": [
-EOP
-	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json1
-	fi
-	rm -f json2
-
-	START=1
-	for (( COUNT=$START; COUNT<=50; COUNT++ ))
-	do
-	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-	(
-	cat << EOP
-                {
-                    "CidrIp": "$iplist/32"
-                },
-EOP
-	) >> json2
-	done
-
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json2
-	fi
-
-	# Remove the last comma to close JSON array
-	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json3
-	fi
-
-	(
-	cat << 'EOP'
-            ]
-        }
-    ]
-}
-EOP
-	) > json4
-
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json4
-	fi
-
-	cat json1 json3 json4 > json
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json
-	fi
-
-	# GROUP 2
-	(
-	cat << EOP
-{
-    "GroupId": "$SGID2",
-    "IpPermissions": [
-        {
-            "IpProtocol": "$PROTOCOL",
-            "FromPort": $FROMPORT,
-            "ToPort": $TOPORT,
-            "IpRanges": [
-EOP
-	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json1
-	fi
-	rm -f json2
-
-	START=51
-	for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
-	do
-	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-	(
-	cat << EOP
-                {
-                    "CidrIp": "$iplist/32"
-                },
-EOP
-	) >> json2
-	done
-
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json2
-	fi
-
-	# Remove the last comma to close JSON array
-	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json3
-	fi
-
-	(
-	cat << 'EOP'
-            ]
-        }
-    ]
-}
-EOP
-	) > json4
-
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json4
-	fi
-
-	cat json1 json3 json4 > json6
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo built json6
-	fi
-}
-
-
 
 # Builds the JSON for 101-150 rules
 function buildJSON100(){
@@ -489,7 +311,6 @@ EOP
 	fi
 }
 
-
 # Request ingress authorization to a security group from JSON file
 function AuthorizeSecurityGroupIngress(){
 	if [[ $DEBUGMODE = "1" ]]; then
@@ -508,132 +329,44 @@ function AuthorizeSecurityGroupIngress(){
 
 # Create AWS VPC Security Groups
 
-# Create one group with 50 rules or less
-function group0(){
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "function group0"
-	fi
-	createGroup
-	echo
-	buildJSON0
-	AuthorizeSecurityGroupIngress
-	completed
-}
-
-# Create multiple groups for 51-100 rules
-function group50(){
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "function group50"
-	fi
-	# Set Variables for Group #1
-	FIRSTGROUPNAME="$GROUPNAME 1"
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
-	fi
-	FIRSTDESCR="$DESCRIPTION 1-50"
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "FIRSTDESCR: "$FIRSTDESCR
-	fi
-	echo
-	HorizontalRule
-	echo "Creating Security Group: "$FIRSTGROUPNAME
-	SGID1=$(aws ec2 create-security-group --group-name "$FIRSTGROUPNAME" --description "$FIRSTDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
-	if echo $SGID1 | grep -q "error"; then
-		fail "$SGID1"
-	fi
-	echo "Security Group ID:" $SGID1
-	TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME" --profile $profile 2>&1)
-	if echo $TAG | grep -q "error"; then
-		fail "$TAG"
-	fi
-	HorizontalRule
-	echo
-	# Set Variables for Group #2
-	SECONDGROUPNAME="$GROUPNAME 2"
-	SECONDDESCR="$DESCRIPTION 51-$TOTALIPS"
-	echo
-	HorizontalRule
-	echo "Creating Security Group: "$SECONDGROUPNAME
-	SGID2=$(aws ec2 create-security-group --group-name "$SECONDGROUPNAME" --description "$SECONDDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
-	if echo $SGID2 | grep -q "error"; then
-		fail "$SGID2"
-	fi
-	echo "Security Group ID:" $SGID2
-	TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME" --profile $profile 2>&1)
-	if echo $TAG | grep -q "error"; then
-		fail "$TAG"
-	fi
-	HorizontalRule
-	echo
-	buildJSON50
-	AuthorizeSecurityGroupIngress
-	cp json6 json
-	AuthorizeSecurityGroupIngress
-	completed
-}
-
 # Create multiple groups for 101-150 rules
 function group100(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "function group100"
 	fi
-	# Set Variables for Group #1
-	FIRSTGROUPNAME="$GROUPNAME 1"
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
+
+	if ! [[ "$GroupsAlreadyExist" -eq "1" ]]; then
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "Groups Do Not Already Exist..."
+		fi
+		# Set Variables for Group #1
+		FIRSTGROUPNAME="$GROUPNAME 1"
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
+		fi
+		FIRSTDESCR="$DESCRIPTION 1-50"
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "FIRSTDESCR: "$FIRSTDESCR
+		fi
+
+		createGroups "$FIRSTGROUPNAME" "$FIRSTDESCR"
+		SGID1="$SGID"
+
+		# Set Variables for Group #2
+		SECONDGROUPNAME="$GROUPNAME 2"
+		SECONDDESCR="$DESCRIPTION 51-100"
+
+		createGroups "$SECONDGROUPNAME" "$SECONDDESCR"
+		SGID2="$SGID"
+
+		# Set Variables for Group #3
+		THIRDGROUPNAME="$GROUPNAME 3"
+		THIRDDESCR="$DESCRIPTION 101-$TOTALIPS"
+
+		createGroups "$THIRDGROUPNAME" "$THIRDDESCR"
+		SGID3="$SGID"
 	fi
-	FIRSTDESCR="$DESCRIPTION 1-50"
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "FIRSTDESCR: "$FIRSTDESCR
-	fi
-	echo
-	HorizontalRule
-	echo "Creating Security Group: "$FIRSTGROUPNAME
-	SGID1=$(aws ec2 create-security-group --group-name "$FIRSTGROUPNAME" --description "$FIRSTDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
-	if echo $SGID1 | grep -q "error"; then
-		fail "$SGID1"
-	fi
-	echo "Security Group ID:" $SGID1
-	TAG=$(aws ec2 create-tags --resources $SGID1 --tags Key=Name,Value="$FIRSTGROUPNAME" --profile $profile 2>&1)
-	if echo $TAG | grep -q "error"; then
-		fail "$TAG"
-	fi
-	HorizontalRule
-	echo
-	# Set Variables for Group #2
-	SECONDGROUPNAME="$GROUPNAME 2"
-	SECONDDESCR="$DESCRIPTION 51-100"
-	echo
-	HorizontalRule
-	echo "Creating Security Group: "$SECONDGROUPNAME
-	SGID2=$(aws ec2 create-security-group --group-name "$SECONDGROUPNAME" --description "$SECONDDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
-	if echo $SGID2 | grep -q "error"; then
-		fail "$SGID2"
-	fi
-	echo "Security Group ID:" $SGID2
-	TAG=$(aws ec2 create-tags --resources $SGID2 --tags Key=Name,Value="$SECONDGROUPNAME" --profile $profile 2>&1)
-	if echo $TAG | grep -q "error"; then
-		fail "$TAG"
-	fi
-	HorizontalRule
-	echo
-	# Set Variables for Group #3
-	THIRDGROUPNAME="$GROUPNAME 3"
-	THIRDDESCR="$DESCRIPTION 101-$TOTALIPS"
-	echo
-	HorizontalRule
-	echo "Creating Security Group: "$THIRDGROUPNAME
-	SGID3=$(aws ec2 create-security-group --group-name "$THIRDGROUPNAME" --description "$THIRDDESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
-	if echo $SGID3 | grep -q "error"; then
-		fail "$SGID3"
-	fi
-	echo "Security Group ID:" $SGID3
-	TAG=$(aws ec2 create-tags --resources $SGID3 --tags Key=Name,Value="$THIRDGROUPNAME" --profile $profile 2>&1)
-	if echo $TAG | grep -q "error"; then
-		fail "$TAG"
-	fi
-	HorizontalRule
-	echo
+
 	buildJSON100
 	AuthorizeSecurityGroupIngress
 	cp json6 json
@@ -697,54 +430,102 @@ function validateGroupName(){
 	fi
 	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
 	if echo "$validateGroupName" | egrep -iq "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
-		fail Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b" | sort) already exist in specified VPC.
+		tput setaf 1; echo Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b" | sort) already exist in specified VPC. && tput sgr0
 
 		# TODO: This part is too complicated to handle smoothly...
-		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
-		if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
-
-			CHECKGROUP=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1)
-			if [ ! $? -eq 0 ]; then
-				fail "$CHECKGROUP"
-			fi
-			GROUPID=$(echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME'") | .GroupId' | cut -d \" -f2)
-
-			if [[ -z $GROUPID ]]; then
-				GROUPID=$(echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME' 1") | .GroupId' | cut -d \" -f2)
-			fi
-			if [[ $DEBUGMODE = "1" ]]; then
-				echo DEBUG GROUPID: "$GROUPID"
-			fi
-			echo
-			HorizontalRule
-			echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
-			HorizontalRule
-			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
-			if echo $DELETEGROUP | grep -q error; then
-				fail $DELETEGROUP
-			fi
+		tput setaf 1; read -r -p "Do you want to remove the existing IPs and add new IPs? (y/n) " deleteIPs && tput sgr0
+		if [[ $deleteIPs =~ ^([yY][eE][sS]|[yY])$ ]]; then
+			deleteIPs
 		else
 			echo "Exiting"
 			exit 1
 		fi
-
-
 	fi
+}
+
+# Remove the existing IPs and add new IPs
+function deleteIPs(){
+	FindGroups=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$FindGroups"
+	fi
+
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "$FindGroups" | jq .
+	fi
+
+	# Assuming there are exactly 3 groups
+	SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 1" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+	SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 2" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+	SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+
+	if [[ -z $SGID1 ]] || [[ -z $SGID2 ]] || [[ -z $SGID3 ]]; then
+		echo "Unable to lookup $GROUPNAME Security Group IDs."
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo DEBUG SGID1: "$SGID1"
+		echo DEBUG SGID2: "$SGID2"
+		echo DEBUG SGID3: "$SGID3"
+	fi
+
+	Group1IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID1" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$Group1IPs"
+	fi
+	Group2IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID2" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$Group2IPs"
+	fi
+	Group3IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID3" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$Group3IPs"
+	fi
+
+	if [[ -z $Group1IPs ]] || [[ -z $Group2IPs ]] || [[ -z $Group3IPs ]]; then
+		fail "Unable to parse $GROUPNAME Security Groups."
+	fi
+
+	Group1IPs=$(echo "$Group1IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
+	Group2IPs=$(echo "$Group2IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
+	Group3IPs=$(echo "$Group3IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo DEBUG Group1IPs: "$Group1IPs"
+		echo DEBUG Group2IPs: "$Group2IPs"
+		echo DEBUG Group3IPs: "$Group3IPs"
+	fi
+
+	echo
+	HorizontalRule
+	echo "Removing IPs from Group Name $GROUPNAME 1, Security Group ID $SGID1"
+	RemoveGroup1IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID1" --profile $profile --ip-permissions "$Group1IPs" 2>&1)
+	HorizontalRule
+
+	echo
+	HorizontalRule
+	echo "Removing IPs from Group Name $GROUPNAME 2, Security Group ID $SGID2"
+	RemoveGroup2IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID2" --profile $profile --ip-permissions "$Group2IPs" 2>&1)
+	HorizontalRule
+
+	echo
+	HorizontalRule
+	echo "Removing IPs from Group Name $GROUPNAME 3, Security Group ID $SGID3"
+	RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --profile $profile --ip-permissions "$Group3IPs" 2>&1)
+	HorizontalRule
+
+	# Set flag so there is no attempt to create the groups again
+	GroupsAlreadyExist="1"
 }
 
 # Run the script and call functions
 
 # Check for required applications
-check_command "jq"
-check_command "wget"
-check_command "perl"
+check_command jq wget perl
 
 validateVPCID
 
 echo
 HorizontalRule
-echo "This script will save a list of current Pingdom probe server IPs in the file pingdom-probe-servers.txt"
-echo "then create one or more AWS VPC Security Groups with rules to allow access to each IP in the port range specified."
+echo "This script will create or update AWS VPC Security Groups with rules to allow access to each Pingdom probe IP in the port range specified."
 HorizontalRule
 echo
 tput setaf 1; echo "Please verify all settings before continuing..." && tput sgr0
@@ -762,7 +543,9 @@ fi
 echo
 pause
 echo
+
 validateGroupName
+
 probeIPs
 
 # Determine number of security groups needed since default AWS limit is 50 rules per group
@@ -771,14 +554,14 @@ probeIPs
 # Create one group with 50 rules or less
 if [ "$TOTALIPS" -gt "0" ]; then
 	if [ "$TOTALIPS" -lt "51" ]; then
-		group0
+		fail "Support for less than 100 IPs has been depreciated."
 	fi
 fi
 
 # Create multiple groups for 51-100 rules
 if [ "$TOTALIPS" -gt "50" ]; then
 	if [ "$TOTALIPS" -lt "101" ]; then
-		group50
+		fail "Support for less than 100 IPs has been depreciated."
 	fi
 fi
 
