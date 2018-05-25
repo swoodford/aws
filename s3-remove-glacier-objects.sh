@@ -42,19 +42,6 @@ if ! grep -q aws_access_key_id ~/.aws/config; then
   fi
 fi
 
-# Check for AWS CLI profile argument passed into the script
-# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
-if [ $# -eq 0 ]; then
-  scriptname=`basename "$0"`
-  echo "Usage: ./$scriptname profile"
-  echo "Where profile is the AWS CLI profile name"
-  echo "Using default profile"
-  echo
-  profile=default
-else
-  profile=$1
-fi
-
 # Check required commands
 check_command "aws"
 check_command "jq"
