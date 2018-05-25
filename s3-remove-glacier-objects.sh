@@ -42,19 +42,6 @@ if ! grep -q aws_access_key_id ~/.aws/config; then
   fi
 fi
 
-# Check for AWS CLI profile argument passed into the script
-# http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
-if [ $# -eq 0 ]; then
-  scriptname=`basename "$0"`
-  echo "Usage: ./$scriptname profile"
-  echo "Where profile is the AWS CLI profile name"
-  echo "Using default profile"
-  echo
-  profile=default
-else
-  profile=$1
-fi
-
 # Check required commands
 check_command "aws"
 check_command "jq"
@@ -73,7 +60,7 @@ if ! [[ $Proceed =~ ^([yY][eE][sS]|[yY])$ ]]; then
 	fail "Cancelled."
 fi
 
-S3BUCKETREGION=$(aws s3api get-bucket-location --bucket "$S3BUCKET" --output text --profile $profile 2>&1)
+S3BUCKETREGION=$(aws s3api get-bucket-location --bucket "$S3BUCKET" --output text 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$S3BUCKETREGION"
 else
@@ -84,26 +71,35 @@ else
 	fi
 fi
 
-LISTGLACIER=$(aws s3api list-objects-v2 --bucket "$S3BUCKET" --query "Contents[?StorageClass=='GLACIER'].Key" --output json --profile $profile --max-items 9999 --region $REGION 2>&1)
+NEXT=''
 
-if [ ! $? -eq 0 ]; then
-	fail "$LISTGLACIER"
-else
-	if [ -z "$LISTGLACIER" ] || [ "$LISTGLACIER" == "[]" ]; then
-		fail "No Glacier objects found in this S3 bucket."
-	fi
-	PARSEGLACIER=$(echo "$LISTGLACIER" | jq .[] | cut -d \" -f2 > GLACIER.txt)
-fi
-
-while read glacier
+while $MORE
 do
-	RM=$(aws s3 rm s3://"$S3BUCKET"/"$glacier" --profile $profile --region $REGION 2>&1)
-	if [ ! $? -eq 0 ]; then
-		fail "$RM"
+	if [ "$NEXT" == "" ]; then
+		LISTGLACIER=$(aws s3api list-objects-v2 --bucket "$S3BUCKET" --query "[NextToken,Contents[?StorageClass=='GLACIER'].Key]" --output json --max-items 9999 --region $REGION 2>&1)
 	else
-		echo "Deleted object:" "$glacier"
+		LISTGLACIER=$(aws s3api list-objects-v2 --bucket "$S3BUCKET" --query "[NextToken,Contents[?StorageClass=='GLACIER'].Key]" --output json --max-items 9999 --region $REGION --starting-token "$NEXT" 2>&1)
 	fi
-done < GLACIER.txt
+	if [ ! $? -eq 0 ]; then
+		fail "$LISTGLACIER"
+	else
+		NEXT=$(echo "$LISTGLACIER" | jq .[0])
+		if [ -z "$NEXT" ] || [ "$NEXT" == "null" ]; then
+			fail "No (more) Glacier objects found in this S3 bucket."
+		fi
+		PARSEGLACIER=$(echo "$LISTGLACIER" | jq ".[1][]" | cut -d \" -f2 > GLACIER.txt)
+	fi
 
-rm GLACIER.txt
+	while read glacier
+	do
+		RM=$(aws s3 rm s3://"$S3BUCKET"/"$glacier" --region $REGION 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$RM"
+		else
+			echo "Deleted object:" "$glacier"
+		fi
+	done < GLACIER.txt
+
+	rm GLACIER.txt
+done
 completed
