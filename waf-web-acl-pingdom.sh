@@ -11,6 +11,8 @@
 
 # Set Variables
 CONDITIONNAME="Pingdom"
+DATE=$(date "+%Y-%m-%d")
+CONDITIONNAME=$CONDITIONNAME-$DATE
 
 # Debug Mode
 DEBUGMODE="0"
@@ -293,7 +295,7 @@ function ListIPSets(){
 		fail "$IPSETID"
 	fi
 	if [[ $DEBUGMODE = "1" ]]; then
-		echo "IPSETID: "$IPSETID
+		echo "ListIPSets IPSETID: "$IPSETID
 	fi
 }
 
@@ -311,7 +313,14 @@ function GetIPSet(){
 # Creates a WAF Rule
 function CreateRule(){
 	ChangeToken
-	RULEID=$(aws waf create-rule --metric-name "$CONDITIONNAME" --name "Allow From $CONDITIONNAME" --change-token $CHANGETOKEN --profile $profile 2>&1 | jq '.Rule | .RuleId' | cut -d '"' -f2)
+	CreateRule=$(aws waf create-rule --metric-name "$(echo $CONDITIONNAME | sed 's/[\._-]//g')" --name "Allow From $CONDITIONNAME" --change-token $CHANGETOKEN --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$CreateRule"
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "CreateRule: "$CreateRule
+	fi
+	RULEID=$(echo "$CreateRule" | jq '.Rule | .RuleId' | cut -d '"' -f2)
 	if [ ! $? -eq 0 ]; then
 		fail "$RULEID"
 	fi
