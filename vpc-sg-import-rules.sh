@@ -69,13 +69,22 @@ fi
 
 # Validate VPC ID
 function validateVPCID(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function validateVPCID"
+	fi
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
 		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
-		if echo $DESCRIBEVPCS | egrep -iq "error|not|invalid"; then
+		if [ ! $? -eq 0 ]; then
+			fail "$DESCRIBEVPCS"
+		fi
+		if echo $DESCRIBEVPCS | egrep -iq "error|not"; then
 			fail "$DESCRIBEVPCS"
 		fi
 		NUMVPCS=$(echo $DESCRIBEVPCS | jq '.Vpcs | length')
+		if [ ! $? -eq 0 ]; then
+			fail "$NUMVPCS"
+		fi
 		if echo $NUMVPCS | egrep -iq "error|not|invalid"; then
 			fail "$NUMVPCS"
 		fi
@@ -83,28 +92,41 @@ function validateVPCID(){
 		# If only one VPC, use that ID
 		if [ "$NUMVPCS" -eq "1" ]; then
 			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if [ ! $? -eq 0 ]; then
+				fail "$VPCID"
+			fi
 		else
-			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1 | jq '.Vpcs | .[] | .VpcId')
+			FOUNDVPCS=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if [ ! $? -eq 0 ]; then
+				fail "$FOUNDVPCS"
+			fi
 			if echo $FOUNDVPCS | egrep -iq "error|not|invalid"; then
 				fail "$FOUNDVPCS"
 			fi
-			echo "Found VPCs:" $FOUNDVPCS
+
+			HorizontalRule
+			echo "Found VPCs:"
+			HorizontalRule
+			# Get VPC Names
+			for vpcid in $FOUNDVPCS; do
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+			done
 			echo
-			read -r -p "Please specify VPC ID (ex. vpc-12345678): " VPCID
+			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
 			if [ -z "$VPCID" ]; then
 				fail "Must specify a valid VPC ID."
 			fi
 		fi
 	fi
-	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
 
-	# Test for error
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$CHECKVPC"
+	fi
 	if ! echo "$CHECKVPC" | grep -q "available"; then
 		fail $CHECKVPC
 	else
-		HorizontalRule
 		tput setaf 2; echo "VPC ID Validated" && tput sgr0
-		HorizontalRule
 	fi
 }
 

@@ -418,17 +418,21 @@ function validateVPCID(){
 				fail "$VPCID"
 			fi
 		else
-			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1 | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			FOUNDVPCS=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
 			if [ ! $? -eq 0 ]; then
 				fail "$FOUNDVPCS"
 			fi
 			if echo $FOUNDVPCS | egrep -iq "error|not|invalid"; then
 				fail "$FOUNDVPCS"
 			fi
+
 			HorizontalRule
 			echo "Found VPCs:"
 			HorizontalRule
-			echo "$FOUNDVPCS"
+			# Get VPC Names
+			for vpcid in $FOUNDVPCS; do
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+			done
 			echo
 			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
 			if [ -z "$VPCID" ]; then
