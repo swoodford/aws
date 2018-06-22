@@ -117,11 +117,17 @@ function createGroups(){
 	HorizontalRule
 	echo "Creating Security Group: "$1
 	SGID=$(aws ec2 create-security-group --group-name "$1" --description "$2" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+	if [ ! $? -eq 0 ]; then
+		fail "$SGID"
+	fi
 	if echo $SGID | grep -q "error"; then
 		fail "$SGID"
 	fi
 	echo "Security Group ID:" $SGID
 	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$1" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$TAG"
+	fi
 	if echo $TAG | grep -q "error"; then
 		fail "$TAG"
 	fi
@@ -391,10 +397,16 @@ function validateVPCID(){
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
 		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$DESCRIBEVPCS"
+		fi
 		if echo $DESCRIBEVPCS | egrep -iq "error|not"; then
 			fail "$DESCRIBEVPCS"
 		fi
 		NUMVPCS=$(echo $DESCRIBEVPCS | jq '.Vpcs | length')
+		if [ ! $? -eq 0 ]; then
+			fail "$NUMVPCS"
+		fi
 		if echo $NUMVPCS | egrep -iq "error|not|invalid"; then
 			fail "$NUMVPCS"
 		fi
@@ -402,8 +414,14 @@ function validateVPCID(){
 		# If only one VPC, use that ID
 		if [ "$NUMVPCS" -eq "1" ]; then
 			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if [ ! $? -eq 0 ]; then
+				fail "$VPCID"
+			fi
 		else
 			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1 | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if [ ! $? -eq 0 ]; then
+				fail "$FOUNDVPCS"
+			fi
 			if echo $FOUNDVPCS | egrep -iq "error|not|invalid"; then
 				fail "$FOUNDVPCS"
 			fi
@@ -420,8 +438,9 @@ function validateVPCID(){
 	fi
 
 	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
-
-	# Test for error
+	if [ ! $? -eq 0 ]; then
+		fail "$CHECKVPC"
+	fi
 	if ! echo "$CHECKVPC" | grep -q "available"; then
 		fail $CHECKVPC
 	else
@@ -436,6 +455,9 @@ function validateGroupName(){
 		echo "GROUPNAME $GROUPNAME"
 	fi
 	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
+	if [ ! $? -eq 0 ]; then
+		fail "$validateGroupName"
+	fi
 	if echo "$validateGroupName" | egrep -iq "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
 		tput setaf 1; echo Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b" | sort) already exist in specified VPC. && tput sgr0
 
@@ -456,7 +478,6 @@ function deleteIPs(){
 	if [ ! $? -eq 0 ]; then
 		fail "$FindGroups"
 	fi
-
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "$FindGroups" | jq .
 	fi
@@ -505,18 +526,27 @@ function deleteIPs(){
 	HorizontalRule
 	echo "Removing IPs from $GROUPNAME 1, Security Group ID $SGID1"
 	RemoveGroup1IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID1" --profile $profile --ip-permissions "$Group1IPs" 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$RemoveGroup1IPs"
+	fi
 	HorizontalRule
 
 	echo
 	HorizontalRule
 	echo "Removing IPs from $GROUPNAME 2, Security Group ID $SGID2"
 	RemoveGroup2IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID2" --profile $profile --ip-permissions "$Group2IPs" 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$RemoveGroup2IPs"
+	fi
 	HorizontalRule
 
 	echo
 	HorizontalRule
 	echo "Removing IPs from $GROUPNAME 3, Security Group ID $SGID3"
 	RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --profile $profile --ip-permissions "$Group3IPs" 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$RemoveGroup3IPs"
+	fi
 	HorizontalRule
 
 	# Set flag so there is no attempt to create the groups again
