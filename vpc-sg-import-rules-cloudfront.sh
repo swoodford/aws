@@ -21,8 +21,11 @@ DEBUGMODE="0"
 # Functions
 
 # Check Command
-function check_command {
-	type -P $1 &>/dev/null || fail "Unable to find $1, please install it and run this script again."
+function check_command(){
+	for command in "$@"
+	do
+	    type -P $command &>/dev/null || fail "Unable to find $command, please install it and run this script again."
+	done
 }
 
 # Completed
@@ -221,8 +224,7 @@ function addRules(){
 
 
 # Check required commands
-check_command "curl"
-check_command "jq"
+check_command curl jq
 
 validateVPCID
 addRules
