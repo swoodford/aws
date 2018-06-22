@@ -431,7 +431,7 @@ function validateVPCID(){
 			HorizontalRule
 			# Get VPC Names
 			for vpcid in $FOUNDVPCS; do
-				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" --profile $profile 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
 			done
 			echo
 			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
