@@ -83,6 +83,7 @@ Debian/Ubuntu:
 
 ![ec2](/images/ec2.png)
 #### EC2
+- **[ec2-ami-encrypted-ebs-boot-volume.sh](ec2-ami-encrypted-ebs-boot-volume.sh)** Create an AMI with an encrypted EBS boot volume from the latest Amazon Linux AMI
 - **[ec2-associate-elastic-ip.sh](ec2-associate-elastic-ip.sh)** Reassign a previously allocated Elastic IP to the instance which runs this script
 - **[ec2-classic-import-network-acl.sh](ec2-classic-import-network-acl.sh)** Import CIDR IP list to AWS EC2 Classic ACL rules and deny access
 - **[ec2-ebs-create-snapshots.sh](ec2-ebs-create-snapshots.sh)** Create a snapshot of each EC2 EBS volume that is tagged with the backup flag
