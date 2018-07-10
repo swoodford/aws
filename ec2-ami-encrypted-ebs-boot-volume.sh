@@ -12,6 +12,7 @@
 
 # Set Variables
 AMITYPE="amzn-ami-hvm-x86_64-gp2"
+Region="default"
 
 
 # Debug Mode
@@ -95,9 +96,11 @@ function ClientToken(){
 
 # Determine region
 function GetRegion(){
-	Region=$(aws configure get region --profile $profile 2>&1)
-	if [ ! $? -eq 0 ]; then
-		fail "$Region"
+	if [ "$Region" == "default" ]; then
+		Region=$(aws configure get region --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$Region"
+		fi
 	fi
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Region: $Region"
@@ -146,7 +149,7 @@ function GetAMI(){
 
 # Build encrypted AMI
 function EncryptAMI(){
-	Encrypt=$(aws ec2 copy-image --encrypted --client-token "$ClientToken" --description "Encrypted $DESCR ($AMIID)" --name "Encrypted $DESCR ($AMIID)" --source-image-id "$AMIID" --source-region $Region --profile $profile 2>&1)
+	Encrypt=$(aws ec2 copy-image --encrypted --client-token "$ClientToken" --description "Encrypted $DESCR ($AMIID)" --name "Encrypted $DESCR ($AMIID)" --source-image-id "$AMIID" --source-region $Region --region $Region --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Encrypt"
 	fi
@@ -172,7 +175,7 @@ function TagAMI(){
 	echo
 	echo
 	echo "Creating Name Tag for AMI ID: $EncryptedAMI"
-	Tag=$(aws ec2 create-tags --resources "$EncryptedAMI" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --profile $profile 2>&1)
+	Tag=$(aws ec2 create-tags --resources "$EncryptedAMI" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Tag"
 	fi
@@ -216,7 +219,7 @@ function QuicklyTagSnapshot(){
 		fi
 		echo
 		echo "Creating Name Tag for Snapshot ID: $SnapshotID"
-		SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --profile $profile 2>&1)
+		SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region --profile $profile 2>&1)
 		if [ ! $? -eq 0 ]; then
 			error "$SnapshotTag"
 		fi
@@ -249,7 +252,7 @@ function SlowlyTagSnapshot(){
 	if [ -z "$SnapshotID" ]; then
 		fail "Unable to get Snapshot ID or Tag Snapshot."
 	fi
-	SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --profile $profile 2>&1)
+	SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$SnapshotTag"
 	fi
