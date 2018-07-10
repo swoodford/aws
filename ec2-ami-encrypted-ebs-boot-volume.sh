@@ -44,6 +44,12 @@ function fail(){
 	exit 1
 }
 
+# Error
+function error(){
+	tput setaf 1; echo "Error: $*" && tput sgr0
+	return 1
+}
+
 # Horizontal Rule
 function HorizontalRule(){
 	echo "============================================================"
@@ -175,44 +181,48 @@ function TagAMI(){
 # Tag the Snapshot
 function QuicklyTagSnapshot(){
 	CallerID=$(aws sts get-caller-identity --profile $profile 2>&1)
-	if [ ! $? -eq 0 ]; then
-		fail "$CallerID"
-	fi
+	# if [ ! $? -eq 0 ]; then
+	# 	error "$CallerID"
+	# fi
 	AccountID=$(echo "$CallerID" | jq '.Account' | cut -d \" -f2)
-	if [ ! $? -eq 0 ]; then
-		fail "$AccountID"
-	fi
+	# if [ ! $? -eq 0 ]; then
+	# 	error "$AccountID"
+	# fi
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "AccountID: $AccountID"
 	fi
-	Snapshots=$(aws ec2 describe-snapshots --owner-ids $AccountID --filters Name=status,Values=pending)
+	Snapshots=$(aws ec2 describe-snapshots --owner-ids $AccountID --filters Name=status,Values=pending --region $Region --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
-		fail "$Snapshots"
+		error "$Snapshots"
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "$Snapshots" | jq .
 	fi
 	NumSnapshots=$(echo "$Snapshots" | jq '.Snapshots | length')
 	if [ ! $? -eq 0 ]; then
-		fail "$NumSnapshots"
+		error "$NumSnapshots"
 	fi
 	if [ "$NumSnapshots" -eq 1 ]; then
 		SnapshotID=$(echo "$Snapshots" | jq '.Snapshots | .[] | .SnapshotId' | cut -d \" -f2)
 		if [ ! $? -eq 0 ]; then
-			fail "$SnapshotID"
+			error "$SnapshotID"
 		fi
 		if [[ $DEBUGMODE = "1" ]]; then
 			echo "SnapshotID: $SnapshotID"
 		fi
 		if [ -z "$SnapshotID" ]; then
-			fail "Unable to get Snapshot ID or Tag Snapshot."
+			return 1
+			# fail "Unable to get Snapshot ID or Tag Snapshot."
 		fi
 		echo
 		echo "Creating Name Tag for Snapshot ID: $SnapshotID"
 		SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --profile $profile 2>&1)
 		if [ ! $? -eq 0 ]; then
-			fail "$SnapshotTag"
+			error "$SnapshotTag"
 		fi
 		echo
 	else
-		SlowlyTagSnapshot
+		return 1
 	fi
 }
 
@@ -283,5 +293,8 @@ GetAMI
 EncryptAMI
 TagAMI
 QuicklyTagSnapshot
+if [ ! $? -eq 0 ]; then
+	SlowlyTagSnapshot
+fi
 
 completed
