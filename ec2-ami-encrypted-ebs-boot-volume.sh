@@ -152,16 +152,124 @@ function EncryptAMI(){
 	echo "Creating $AMITYPE AMI with encrypted boot volume:"
 	HorizontalRule
 	echo
-	tput setaf 2; echo "New AMI ID: $EncryptedAMI" && tput sgr0
+	tput setaf 2; echo "New AMI ID: $EncryptedAMI"; echo "Encrypted $DESCR ($AMIID)"; tput sgr0
 }
 
+# Tag the AMI
 function TagAMI(){
+	# Short pause to allow resources some time to be created before attempting to tag
+	echo
+	for i in {1..10}; do
+		printf "."
+		sleep 1
+	done
+	echo
+	echo
+	echo "Creating Name Tag for AMI ID: $EncryptedAMI"
 	Tag=$(aws ec2 create-tags --resources "$EncryptedAMI" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Tag"
 	fi
+}
+
+# Tag the Snapshot
+function QuicklyTagSnapshot(){
+	CallerID=$(aws sts get-caller-identity --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$CallerID"
+	fi
+	AccountID=$(echo "$CallerID" | jq '.Account' | cut -d \" -f2)
+	if [ ! $? -eq 0 ]; then
+		fail "$AccountID"
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "AccountID: $AccountID"
+	fi
+	Snapshots=$(aws ec2 describe-snapshots --owner-ids $AccountID --filters Name=status,Values=pending)
+	if [ ! $? -eq 0 ]; then
+		fail "$Snapshots"
+	fi
+	NumSnapshots=$(echo "$Snapshots" | jq '.Snapshots | length')
+	if [ ! $? -eq 0 ]; then
+		fail "$NumSnapshots"
+	fi
+	if [ "$NumSnapshots" -eq 1 ]; then
+		SnapshotID=$(echo "$Snapshots" | jq '.Snapshots | .[] | .SnapshotId' | cut -d \" -f2)
+		if [ ! $? -eq 0 ]; then
+			fail "$SnapshotID"
+		fi
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "SnapshotID: $SnapshotID"
+		fi
+		if [ -z "$SnapshotID" ]; then
+			fail "Unable to get Snapshot ID or Tag Snapshot."
+		fi
+		echo
+		echo "Creating Name Tag for Snapshot ID: $SnapshotID"
+		SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$SnapshotTag"
+		fi
+		echo
+	else
+		SlowlyTagSnapshot
+	fi
+}
+
+# Tag the Snapshot (fallback)
+function SlowlyTagSnapshot(){
 	echo
-	echo "Created Name tag for AMI: Encrypted $DESCR ($AMIID)"
+	echo
+	echo "Creating Name Tag for Snapshot..."
+	echo "Waiting for AMI State to become available, may take around 5 minutes..."
+	starttime=$(date +%s)
+	CheckState
+	finishtime=$(date +%s)
+	seconds=$(expr $finishtime - $starttime)
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo; echo "This took $(expr $seconds / 60) minutes."
+	fi
+	SnapshotID=$(echo "$AMIdescr" | jq '.Images | .[] | .BlockDeviceMappings | .[] | .Ebs | .SnapshotId' | cut -d \" -f2)
+	if [ ! $? -eq 0 ]; then
+		fail "$SnapshotID"
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "SnapshotID: $SnapshotID"
+	fi
+	if [ -z "$SnapshotID" ]; then
+		fail "Unable to get Snapshot ID or Tag Snapshot."
+	fi
+	SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$SnapshotTag"
+	fi
+	echo; echo "Tagged Snapshot: $SnapshotID"
+	echo
+}
+
+# Check AMI State
+function CheckState(){
+	AMIdescr=$(aws ec2 describe-images --image-ids "$EncryptedAMI" --region $Region --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$AMIdescr"
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "AMIdescr: $AMIdescr"
+	fi
+	AMIstate=$(echo "$AMIdescr" | jq '.Images | .[] | .State' | cut -d \" -f2)
+	if [ ! $? -eq 0 ]; then
+		fail "$AMIstate"
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "AMIstate: $AMIstate"
+	fi
+	while [ $AMIstate != "available" ]; do
+		for i in {1..30}; do
+			printf "."
+			sleep 1
+		done
+		CheckState
+	done
 }
 
 # Run the script and call functions
@@ -174,5 +282,6 @@ GetRegion
 GetAMI
 EncryptAMI
 TagAMI
+QuicklyTagSnapshot
 
 completed
