@@ -8,11 +8,20 @@
 
 ## Table of contents
 
+- [Why](#why)
 - [Getting Started](#getting-started)
 - [What's Included](#tools-included-in-this-repo)
 - [Bugs and Feature Requests](#bugs-and-feature-requests)
 - [Creator](#creator)
 - [Copyright and License](#copyright-and-license)
+  
+
+## Why
+
+Why does this project exist?  
+
+This repository is intended to make some of the more difficult DevOps tasks commonly required to maintain complex hosting infrastructure in AWS simple, quick and easy.  This is my attempt to automate and expedite difficult, repetitive, tedious and time consuming processes into a simple shell script that gets the job done as cleanly as possible.  These scripts were developed out of frustration in clicking around on the same things over and over again in the web console every day, week, month when they could easly be done in seconds in a script that uses the AWS CLI.  I've tried to keep everything applicable to as many use cases across regions and across as many different AWS accounts as possible.  I run many of these scripts myself, mostly on a Mac or in Linux and do periodic usability and bug checking, making updates for any changes to the CLI.  I hope this collection of tools helps you too, and if you use these please hit the Star/Fork button and if you have any suggestions please open an Issue or PR!  
+
 
 ## Getting Started
 
