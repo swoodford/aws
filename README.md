@@ -132,6 +132,7 @@ Debian/Ubuntu:
 - **[vpc-sg-import-rules-cloudfront.sh](vpc-sg-import-rules-cloudfront.sh)** Create VPC Security Group with CloudFront IP ranges
 - **[vpc-sg-import-rules-pingdom.sh](vpc-sg-import-rules-pingdom.sh)** Create or Update VPC Security Groups with [Pingdom](https://www.pingdom.com/) probe server IP ranges
 - **[vpc-sg-merge-groups.sh](vpc-sg-merge-groups.sh)** Merge two existing VPC Security Groups together into one single group
+- **[vpc-sg-rename-group.sh](vpc-sg-rename-group.sh)** Rename an existing VPC Security Group by creating an identical new group
 
 ![waf](/images/waf.png)
 #### WAF
