@@ -1,8 +1,11 @@
----
-name: Bug report
-about: Create a report to help us improve
+<!---
+Verify first that your issue/request is not already reported on GitHub.
+Also test if the latest release, and master branch are affected too.
+-->
 
----
+#### Issue Type
+ - Bug Report
+
 
 #### Script Name
 Name of the script, file or feature, do not include extra details here
