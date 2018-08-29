@@ -91,10 +91,10 @@ otherwise you risk spending a lot of time working on something that the
 project's developers might not want to merge into the project.
 
 **IMPORTANT**: By submitting a patch, you agree to allow the project owners to
-license your work under the terms of the [Apache License 2.0](LICENSE) (if it
+license your work under the terms of the [Apache License 2.0](https://github.com/swoodford/aws/blob/master/LICENSE.md) (if it
 includes code changes).
 
 
 ## License
 
-By contributing your code, you agree to license your contribution under the [Apache License 2.0](LICENSE).
+By contributing your code, you agree to license your contribution under the [Apache License 2.0](https://github.com/swoodford/aws/blob/master/LICENSE.md).
