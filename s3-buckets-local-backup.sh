@@ -56,7 +56,9 @@ fi
 
 # List buckets
 LS=$(aws s3 ls --profile $profile 2>&1)
-
+if [ ! $? -eq 0 ]; then
+  fail "$LS"
+fi
 if echo "$LS" | egrep -q "Error|error|not"; then
   fail "$LS"
 fi
@@ -87,21 +89,23 @@ do
   HorizontalRule
   echo \#$COUNT $CURRENTBUCKET
 
-  # # Determine the bucket region
-  # CURRENTBUCKETREGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text --profile $profile 2>&1)
-  # if echo $CURRENTBUCKETREGION | grep -q "None"; then
-  #   REGION="us-east-1"
-  # else
-  #   REGION=$CURRENTBUCKETREGION
-  # fi
+  # Determine the bucket region
+  REGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text --profile $profile 2>&1)
+  if [ ! $? -eq 0 ]; then
+    fail "$REGION"
+  fi
+  if echo $REGION | grep -q "None"; then
+    REGION="us-east-1"
+  fi
 
   # Backup the S3 bucket contents
-  BACKUP=$(aws s3 sync s3://$CURRENTBUCKET $SUBFOLDER/$CURRENTBUCKET/ --profile $profile --quiet 2>&1)
-
+  BACKUP=$(aws s3 sync s3://$CURRENTBUCKET $SUBFOLDER/$CURRENTBUCKET/ --region $REGION --profile $profile --quiet 2>&1)
+  if [ ! $? -eq 0 ]; then
+    fail "$BACKUP"
+  fi
   if echo "$BACKUP" | egrep -q "Error|error|not"; then
     fail "$BACKUP"
   fi
-
 done
 
 completed

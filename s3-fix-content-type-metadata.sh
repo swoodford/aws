@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Safely fix invalid content-type metadata on AWS S3 bucket website assets for some common filetypes
-# Inclues CSS, JS, JPG, JPEG, GIF, PNG, SVG, PDF
+# Inclues CSS, JS, JSON, JPG, JPEG, GIF, PNG, SVG, PDF, XML
 
 BUCKET="YOUR-S3-BUCKET-NAME"
 
@@ -66,7 +66,8 @@ else
 fi
 
 message "This script will safely fix invalid content-type metadata on AWS S3 bucket website assets."
-pause
+echo
+# pause
 
 # Ensure Variables are set
 if [ "$BUCKET" = "YOUR-S3-BUCKET-NAME" ]; then
@@ -76,8 +77,20 @@ if [ "$BUCKET" = "YOUR-S3-BUCKET-NAME" ]; then
 	fi
 fi
 
+# Determine the bucket region
+REGION=$(aws s3api get-bucket-location --bucket $BUCKET --output text --profile $profile 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$REGION"
+fi
+if echo $REGION | grep -q "None"; then
+	REGION="us-east-1"
+fi
+
 message CSS
-css=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.css" --content-type "text/css" --metadata-directive "REPLACE" 2>&1)
+css=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.css" --content-type "text/css" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$css"
+fi
 if echo $css | grep -q error; then
 	fail "$css"
 else
@@ -85,22 +98,42 @@ else
 fi
 
 message JS
-js=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.js" --content-type "application/javascript" --metadata-directive "REPLACE" 2>&1)
+js=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.js" --content-type "application/javascript" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$js"
+fi
 if echo $js | grep -q error; then
 	fail "$js"
 else
 	echo "$js"
 fi
 
+message JSON
+json=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.json" --content-type "application/json" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$json"
+fi
+if echo $json | grep -q error; then
+	fail "$json"
+else
+	echo "$json"
+fi
+
 message JPG
-jpg=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
+jpg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$jpg"
+fi
 if echo $jpg | grep -q error; then
 	fail "$jpg"
 else
 	echo "$jpg"
 fi
 message JPEG
-jpeg=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpeg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
+jpeg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpeg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$jpeg"
+fi
 if echo $jpeg | grep -q error; then
 	fail "$jpeg"
 else
@@ -108,7 +141,10 @@ else
 fi
 
 message GIF
-gif=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.gif" --content-type "image/gif" --metadata-directive "REPLACE" 2>&1)
+gif=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.gif" --content-type "image/gif" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$gif"
+fi
 if echo $gif | grep -q error; then
 	fail "$gif"
 else
@@ -116,7 +152,10 @@ else
 fi
 
 message PNG
-png=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.png" --content-type "image/png" --metadata-directive "REPLACE" 2>&1)
+png=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.png" --content-type "image/png" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$png"
+fi
 if echo $png | grep -q error; then
 	fail "$png"
 else
@@ -124,7 +163,10 @@ else
 fi
 
 message SVG
-svg=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.svg" --content-type "image/svg+xml" --metadata-directive "REPLACE" 2>&1)
+svg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.svg" --content-type "image/svg+xml" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$svg"
+fi
 if echo $svg | grep -q error; then
 	fail "$svg"
 else
@@ -132,11 +174,26 @@ else
 fi
 
 message PDF
-pdf=$(aws s3 cp --recursive --profile $profile s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.pdf" --content-type "application/pdf" --metadata-directive "REPLACE" 2>&1)
+pdf=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.pdf" --content-type "application/pdf" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$pdf"
+fi
 if echo $pdf | grep -q error; then
 	fail "$pdf"
 else
 	echo "$pdf"
 fi
+
+message XML
+xml=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.xml" --content-type "text/xml" --metadata-directive "REPLACE" 2>&1)
+if [ ! $? -eq 0 ]; then
+	fail "$xml"
+fi
+if echo $xml | grep -q error; then
+	fail "$xml"
+else
+	echo "$xml"
+fi
+
 
 completed
