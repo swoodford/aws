@@ -122,6 +122,7 @@ Debian/Ubuntu:
 - **[s3-open-bucket-policy.sh](s3-open-bucket-policy.sh)** Set an S3 bucket policy to allow GetObject requests from any IP address (publicly accessible website)
 - **[s3-remove-glacier-objects.sh](s3-remove-glacier-objects.sh)** Delete all Glacier storage type objects in a single S3 bucket
 - **[s3-restrict-bucket-policy.sh](s3-restrict-bucket-policy.sh)** Set an S3 bucket policy to only allow GetObject requests from an IP whitelist file named iplist
+- **[s3-set-cache-control-max-age.sh](s3-set-cache-control-max-age.sh)** Set Cache-Control max-age value on AWS S3 bucket website assets for all filetypes
 - **[s3-setup-buckets.sh](s3-setup-buckets.sh)** Create S3 buckets, set CORS config and tag bucket with client name
 
 ![vpc](/images/vpc.png)
