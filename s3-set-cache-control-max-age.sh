@@ -4,7 +4,7 @@
 # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 
 BUCKET="YOUR-S3-BUCKET-NAME"
-MAXAGE="SET-MILLISECONDS-VALUE-HERE"
+MAXAGE="SET-SECONDS-VALUE-HERE"
 
 # Functions
 
@@ -76,12 +76,14 @@ if [ "$BUCKET" = "YOUR-S3-BUCKET-NAME" ]; then
 		fail "Failed to set variables!"
 	fi
 fi
-if [ "$MAXAGE" = "SET-MILLISECONDS-VALUE-HERE" ]; then
-	read -r -p "Enter the new Cache-Control Max-Age value in milliseconds: " MAXAGE
+if [ "$MAXAGE" = "SET-SECONDS-VALUE-HERE" ]; then
+	read -r -p "Enter the new Cache-Control Max-Age value in seconds: " MAXAGE
 	if [ -z "$MAXAGE" ]; then
 		fail "Failed to set variables!"
 	fi
 fi
+
+# Validate max-age range 0-31536000
 
 # Determine the bucket region
 REGION=$(aws s3api get-bucket-location --bucket $BUCKET --output text --profile $profile 2>&1)
