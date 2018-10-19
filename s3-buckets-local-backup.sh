@@ -103,7 +103,7 @@ do
   if [ ! $? -eq 0 ]; then
     fail "$BACKUP"
   fi
-  if echo "$BACKUP" | egrep -q "Error|error|not"; then
+  if echo "$BACKUP" | egrep -iq "error|not"; then
     fail "$BACKUP"
   fi
 done
