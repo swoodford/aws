@@ -91,7 +91,7 @@ css=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3
 if [ ! $? -eq 0 ]; then
 	fail "$css"
 fi
-if echo $css | grep -q error; then
+if echo $css | egrep -iq "error|not"; then
 	fail "$css"
 else
 	echo "$css"
@@ -102,7 +102,7 @@ js=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3:
 if [ ! $? -eq 0 ]; then
 	fail "$js"
 fi
-if echo $js | grep -q error; then
+if echo $js | egrep -iq "error|not"; then
 	fail "$js"
 else
 	echo "$js"
@@ -113,7 +113,7 @@ json=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s
 if [ ! $? -eq 0 ]; then
 	fail "$json"
 fi
-if echo $json | grep -q error; then
+if echo $json | egrep -iq "error|not"; then
 	fail "$json"
 else
 	echo "$json"
@@ -124,7 +124,7 @@ jpg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3
 if [ ! $? -eq 0 ]; then
 	fail "$jpg"
 fi
-if echo $jpg | grep -q error; then
+if echo $jpg | egrep -iq "error|not"; then
 	fail "$jpg"
 else
 	echo "$jpg"
@@ -134,7 +134,7 @@ jpeg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s
 if [ ! $? -eq 0 ]; then
 	fail "$jpeg"
 fi
-if echo $jpeg | grep -q error; then
+if echo $jpeg | egrep -iq "error|not"; then
 	fail "$jpeg"
 else
 	echo "$jpeg"
@@ -145,7 +145,7 @@ gif=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3
 if [ ! $? -eq 0 ]; then
 	fail "$gif"
 fi
-if echo $gif | grep -q error; then
+if echo $gif | egrep -iq "error|not"; then
 	fail "$gif"
 else
 	echo "$gif"
@@ -156,7 +156,7 @@ png=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3
 if [ ! $? -eq 0 ]; then
 	fail "$png"
 fi
-if echo $png | grep -q error; then
+if echo $png | egrep -iq "error|not"; then
 	fail "$png"
 else
 	echo "$png"
@@ -167,7 +167,7 @@ svg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3
 if [ ! $? -eq 0 ]; then
 	fail "$svg"
 fi
-if echo $svg | grep -q error; then
+if echo $svg | egrep -iq "error|not"; then
 	fail "$svg"
 else
 	echo "$svg"
@@ -178,7 +178,7 @@ pdf=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3
 if [ ! $? -eq 0 ]; then
 	fail "$pdf"
 fi
-if echo $pdf | grep -q error; then
+if echo $pdf | egrep -iq "error|not"; then
 	fail "$pdf"
 else
 	echo "$pdf"
@@ -189,7 +189,7 @@ xml=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3
 if [ ! $? -eq 0 ]; then
 	fail "$xml"
 fi
-if echo $xml | grep -q error; then
+if echo $xml | egrep -iq "error|not"; then
 	fail "$xml"
 else
 	echo "$xml"
