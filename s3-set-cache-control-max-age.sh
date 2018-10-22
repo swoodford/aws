@@ -84,6 +84,9 @@ if [ "$MAXAGE" = "SET-SECONDS-VALUE-HERE" ]; then
 fi
 
 # Validate max-age range 0-31536000
+if ! [ "$MAXAGE" -ge "0" ] || ! [ "$MAXAGE" -le "31536000" ]; then
+	fail "Invalid Cache-Control Max-Age value: $MAXAGE"
+fi
 
 # Determine the bucket region
 REGION=$(aws s3api get-bucket-location --bucket $BUCKET --output text --profile $profile 2>&1)
