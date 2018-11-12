@@ -3,14 +3,14 @@
 # Create VPC Security Group with CloudFront IP ranges
 
 # Get current list of CloudFront IP ranges
-IPLIST=$(curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | jq '.prefixes | .[] | select(.service=="CLOUDFRONT") | .ip_prefix' | cut -d \" -f2)
+IPLIST=$(curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | jq '.prefixes | .[] | select(.service=="CLOUDFRONT") | .ip_prefix' | cut -d \" -f2 | sort)
 
 # Set Variables
 GROUPNAME="CloudFront"
 DESCR="CloudFront IP Ranges"
 VPCID="YOUR-VPC-ID-HERE"
 PROTO="tcp"
-PORT="80"
+PORT="443"
 TOTALIPS=$(echo "$IPLIST" | wc -l)
 
 
@@ -140,72 +140,101 @@ function validateVPCID(){
 	fi
 }
 
-function addRules(){
-	# Check for existing security group or create new one
-	CHECKGROUP=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1)
-	if [ ! $? -eq 0 ]; then
-		fail "$CHECKGROUP"
+# Check for existing security group or create new one
+function checkExisting(){
+	# Group Name Variations
+	GROUPNAMELOWER=$(echo "$GROUPNAME" | awk '{print tolower($0)}')
+	GROUPNAMEUPPER=$(echo "$GROUPNAME" | awk '{print toupper($0)}')
+	GROUPNAMETITLE=$(echo "$GROUPNAMELOWER" | awk '{for (i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1')
+
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "GROUPNAME: $GROUPNAME"
+		echo "GROUPNAMELOWER: $GROUPNAMELOWER"
+		echo "GROUPNAMEUPPER: $GROUPNAMEUPPER"
+		echo "GROUPNAMETITLE: $GROUPNAMETITLE"
 	fi
-	if ! echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | .GroupName' | egrep -iq "$GROUPNAME"; then
+
+	DESCRIBEGROUPS=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$DESCRIBEGROUPS"
+	fi
+
+	if echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME'")' | egrep -iq "$GROUPNAME"; then
 		echo
 		HorizontalRule
-		echo "Creating Security Group "$GROUPNAME
-		GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID --profile $profile 2>&1)
+		tput setaf 1; echo "Group $GROUPNAME Already Exists" && tput sgr0
+		GROUPID=$(echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME'") | .GroupId' | cut -d \" -f2)
+		deleteExisting
+	fi
+	if echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAMELOWER'")' | egrep -iq "$GROUPNAMELOWER"; then
+		echo
+		HorizontalRule
+		tput setaf 1; echo "Group $GROUPNAMELOWER Already Exists" && tput sgr0
+		GROUPID=$(echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAMELOWER'") | .GroupId' | cut -d \" -f2)
+		deleteExisting
+	fi
+	if echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAMEUPPER'")' | egrep -iq "$GROUPNAMEUPPER"; then
+		echo
+		HorizontalRule
+		tput setaf 1; echo "Group $GROUPNAMEUPPER Already Exists" && tput sgr0
+		GROUPID=$(echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAMEUPPER'") | .GroupId' | cut -d \" -f2)
+		deleteExisting
+	fi
+	if echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAMETITLE'")' | egrep -iq "$GROUPNAMETITLE"; then
+		echo
+		HorizontalRule
+		tput setaf 1; echo "Group $GROUPNAMETITLE Already Exists" && tput sgr0
+		GROUPID=$(echo "$DESCRIBEGROUPS" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAMETITLE'") | .GroupId' | cut -d \" -f2)
+		deleteExisting
+	fi
+}
+
+# Delete existing group
+function deleteExisting(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo DEBUG EXISTING GROUPID: "$GROUPID"
+	fi
+	read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
+	if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
+		echo
+		HorizontalRule
+		echo "Deleting Security Group ID: $GROUPID"
+		HorizontalRule
+		DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$GROUPID"
-		else
-			GROUPID=$(echo "$GROUPID" | jq '.GroupId' | cut -d \" -f2)
 		fi
-		echo "ID: $GROUPID"
-		TAGS=$(aws ec2 create-tags --resources "$GROUPID" --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
-		if [ ! $? -eq 0 ]; then
-			fail "$TAGS"
+		if echo $DELETEGROUP | grep -q error; then
+			fail $DELETEGROUP
 		fi
-		HorizontalRule
+		completed
 	else
-		echo
-		HorizontalRule
-		echo "Group $GROUPNAME Already Exists"
-		CHECKGROUP=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1)
-		if [ ! $? -eq 0 ]; then
-			fail "$CHECKGROUP"
-		fi
-		GROUPID=$(echo "$CHECKGROUP" | jq '.SecurityGroups | .[] | select(.GroupName=="'$GROUPNAME'") | .GroupId' | cut -d \" -f2)
-		if [[ $DEBUGMODE = "1" ]]; then
-			echo DEBUG GROUPID: "$GROUPID"
-		fi
-		read -r -p "Do you want to delete the group and recreate it? (y/n) " DELETEGROUP
-		if [[ $DELETEGROUP =~ ^([yY][eE][sS]|[yY])$ ]]; then
-			echo
-			HorizontalRule
-			echo "Deleting Group Name $GROUPNAME, Security Group ID $GROUPID"
-			HorizontalRule
-			DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
-			if echo $DELETEGROUP | grep -q error; then
-				fail $DELETEGROUP
-			else
-				echo
-				HorizontalRule
-				echo "Creating Security Group "$GROUPNAME
-				GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID --profile $profile 2>&1)
-				if [ ! $? -eq 0 ]; then
-					fail "$GROUPID"
-				else
-					GROUPID=$(echo "$GROUPID" | jq '.GroupId' | cut -d \" -f2)
-				fi
-				echo "ID: $GROUPID"
-				TAGS=$(aws ec2 create-tags --resources "$GROUPID" --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
-				if [ ! $? -eq 0 ]; then
-					fail "$TAGS"
-				fi
-				HorizontalRule
-			fi
-		else
-			echo "Exiting"
-			exit 1
-		fi
+		echo "Cancelled."
+		exit 1
 	fi
+}
+
+# Create Security Group
+function createGroup(){
 	echo
+	HorizontalRule
+	echo "Creating Security Group "$GROUPNAME
+	GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id "$VPCID" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$GROUPID"
+	else
+		GROUPID=$(echo "$GROUPID" | jq '.GroupId' | cut -d \" -f2)
+	fi
+	echo "ID: $GROUPID"
+	TAGS=$(aws ec2 create-tags --resources "$GROUPID" --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$TAGS"
+	fi
+	HorizontalRule
+}
+
+# Add Rules to Security Group
+function addRules(){
 	echo
 	HorizontalRule
 	echo "Adding rules to VPC Security Group "$GROUPNAME
@@ -227,4 +256,6 @@ function addRules(){
 check_command curl jq
 
 validateVPCID
+checkExisting
+createGroup
 addRules
