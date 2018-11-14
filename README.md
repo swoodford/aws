@@ -87,6 +87,7 @@ Debian/Ubuntu:
 - **[cloudwatch-create-alarms-statuscheckfailed.sh](cloudwatch-create-alarms-statuscheckfailed.sh)** Create CloudWatch StatusCheckFailed Alarms with Recovery Action for all running EC2 Instances in all regions available
 - **[cloudwatch-create-alarms-unhealthyhost.sh](cloudwatch-create-alarms-unhealthyhost.sh)** Create CloudWatch UnhealthyHost Alarms for all ALB and ELB Elastic Load Balancers in all regions available
 - **[cloudwatch-logs-cleanup.sh](cloudwatch-logs-cleanup.sh)** Delete all CloudWatch Log Groups with a Last Event that is older than the Retention Policy
+- **[cloudwatch-logs-delete-groups.sh](cloudwatch-logs-delete-groups.sh)** Quickly delete all CloudWatch Log Groups with a specified prefix in all regions available
 - **[cloudwatch-logs-search.sh](cloudwatch-logs-search.sh)** Search CloudWatch Logs for any string across all regions and log groups
 - **[cloudwatch-logs-retention-policy.sh](cloudwatch-logs-retention-policy.sh)** Set CloudWatch Logs Retention Policy for all log groups in all regions available
 
