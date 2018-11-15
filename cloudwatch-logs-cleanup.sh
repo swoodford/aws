@@ -6,7 +6,7 @@
 # Set Variables
 
 # Optionally limit to a single AWS Region
-Region="x"
+Region="ALL"
 
 # Debug Mode
 DEBUGMODE="0"
@@ -96,7 +96,7 @@ function Warning(){
 }
 
 # Limit region
-if [[ "$Region" == "x" ]]; then
+if [[ "$Region" == "ALL" ]]; then
 	read -r -p "Enter a single Region name or press return to search all regions: " Region
 fi
 
