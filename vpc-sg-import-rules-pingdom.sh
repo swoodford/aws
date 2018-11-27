@@ -23,7 +23,7 @@ FROMPORT="80"
 TOPORT="443"
 
 # Debug Mode
-DEBUGMODE="1"
+DEBUGMODE="0"
 
 
 # Functions
