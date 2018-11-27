@@ -3,13 +3,14 @@
 # This script will save a list of current Pingdom IPv4 probe server IPs in the file pingdom-probe-servers.txt
 # Then create an AWS VPC Security Group with rules to allow access to each IP at the port specified.
 
-# Pingdom currently has 109 IPv4 probe IPs. Due to AWS limits a security group can only have 50 rules,
-# Therefore three groups will be needed to contain all IPs for Pingdom probes.
+# Pingdom currently has 114 IPv4 probe IPs. Due to AWS limits a security group can only have 60 rules,
+# Therefore multiple groups will be needed to contain all IPs for Pingdom probes.
+# (https://docs.aws.amazon.com/vpc/latest/userguide/amazon-vpc-limits.html#vpc-limits-security-groups)
 
 # If security groups have already been created for Pingdom, the script will remove all the IP rules and
 # add new rules to the same groups so they are not deleted and groups are still assigned to your resources.
 
-# This script currently supports up to 150 probe IPs (three security groups).
+# This script currently supports up to 180 probe IPs (three security groups).
 # Requires the AWS CLI, jq, wget, perl
 
 # Set Variables
@@ -22,7 +23,7 @@ FROMPORT="80"
 TOPORT="443"
 
 # Debug Mode
-DEBUGMODE="0"
+DEBUGMODE="1"
 
 
 # Functions
@@ -135,8 +136,140 @@ function createGroups(){
 	echo
 }
 
-# Builds the JSON for 101-150 rules
-function buildJSON100(){
+# Builds the JSON for 61-120 rules
+function buildJSON120(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function buildJSON120"
+	fi
+	(
+	cat << EOP
+{
+    "GroupId": "$SGID1",
+    "IpPermissions": [
+        {
+            "IpProtocol": "$PROTOCOL",
+            "FromPort": $FROMPORT,
+            "ToPort": $TOPORT,
+            "IpRanges": [
+EOP
+	) > json1
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json1
+	fi
+	rm -f json2
+
+	START=1
+	for (( COUNT=$START; COUNT<=60; COUNT++ ))
+	do
+	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+	# if [[ $DEBUGMODE = "1" ]]; then
+	# 	echo iplist:
+	# 	echo
+	# 	echo "$iplist"
+	# 	echo
+	# 	# pause
+	# fi
+	(
+	cat << EOP
+                {
+                    "CidrIp": "$iplist/32"
+                },
+EOP
+	) >> json2
+	done
+
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json2
+	fi
+
+	# Remove the last comma to close JSON array
+	cat json2 | sed '$ s/.$//' > json3
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json3
+	fi
+
+	(
+	cat << 'EOP'
+            ]
+        }
+    ]
+}
+EOP
+	) > json4
+
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json4
+	fi
+
+	cat json1 json3 json4 > json
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json
+	fi
+
+	# GROUP 2
+	(
+	cat << EOP
+{
+    "GroupId": "$SGID2",
+    "IpPermissions": [
+        {
+            "IpProtocol": "$PROTOCOL",
+            "FromPort": $FROMPORT,
+            "ToPort": $TOPORT,
+            "IpRanges": [
+EOP
+	) > json1
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json1
+	fi
+	rm -f json2
+
+	START=61
+	for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
+	do
+	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
+	(
+	cat << EOP
+                {
+                    "CidrIp": "$iplist/32"
+                },
+EOP
+	) >> json2
+	done
+
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json2
+	fi
+
+	# Remove the last comma to close JSON array
+	cat json2 | sed '$ s/.$//' > json3
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json3
+	fi
+
+	(
+	cat << 'EOP'
+            ]
+        }
+    ]
+}
+EOP
+	) > json4
+
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json4
+	fi
+
+	cat json1 json3 json4 > json6
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo built json6
+	fi
+
+}
+
+
+# Builds the JSON for 121-180 rules
+function buildJSON180(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "function buildJSON100"
 	fi
@@ -158,7 +291,7 @@ EOP
 	rm -f json2
 
 	START=1
-	for (( COUNT=$START; COUNT<=50; COUNT++ ))
+	for (( COUNT=$START; COUNT<=60; COUNT++ ))
 	do
 	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
 	(
@@ -216,8 +349,8 @@ EOP
 	fi
 	rm -f json2
 
-	START=51
-	for (( COUNT=$START; COUNT<=100; COUNT++ ))
+	START=61
+	for (( COUNT=$START; COUNT<=120; COUNT++ ))
 	do
 	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
 	(
@@ -275,7 +408,7 @@ EOP
 	fi
 	rm -f json2
 
-	START=101
+	START=121
 	for (( COUNT=$START; COUNT<=$TOTALIPS; COUNT++ ))
 	do
 	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
@@ -342,8 +475,46 @@ function AuthorizeSecurityGroupIngress(){
 
 # Create AWS VPC Security Groups
 
-# Create multiple groups for 101-150 rules
-function group100(){
+# Create multiple groups for 61-120 rules
+function group120(){
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "function group120"
+	fi
+
+	if ! [[ "$GroupsAlreadyExist" -eq "1" ]]; then
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "Groups Do Not Already Exist..."
+		fi
+		# Set Variables for Group #1
+		FIRSTGROUPNAME="$GROUPNAME 1"
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
+		fi
+		FIRSTDESCR="$DESCRIPTION 1-60"
+		if [[ $DEBUGMODE = "1" ]]; then
+			echo "FIRSTDESCR: "$FIRSTDESCR
+		fi
+
+		createGroups "$FIRSTGROUPNAME" "$FIRSTDESCR"
+		SGID1="$SGID"
+
+		# Set Variables for Group #2
+		SECONDGROUPNAME="$GROUPNAME 2"
+		SECONDDESCR="$DESCRIPTION 61-$TOTALIPS"
+
+		createGroups "$SECONDGROUPNAME" "$SECONDDESCR"
+		SGID2="$SGID"
+	fi
+
+	buildJSON120
+	AuthorizeSecurityGroupIngress
+	cp json6 json
+	AuthorizeSecurityGroupIngress
+	completed
+}
+
+# Create multiple groups for 121-180 rules
+function group180(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "function group100"
 	fi
@@ -357,7 +528,7 @@ function group100(){
 		if [[ $DEBUGMODE = "1" ]]; then
 			echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
 		fi
-		FIRSTDESCR="$DESCRIPTION 1-50"
+		FIRSTDESCR="$DESCRIPTION 1-60"
 		if [[ $DEBUGMODE = "1" ]]; then
 			echo "FIRSTDESCR: "$FIRSTDESCR
 		fi
@@ -367,20 +538,20 @@ function group100(){
 
 		# Set Variables for Group #2
 		SECONDGROUPNAME="$GROUPNAME 2"
-		SECONDDESCR="$DESCRIPTION 51-100"
+		SECONDDESCR="$DESCRIPTION 61-120"
 
 		createGroups "$SECONDGROUPNAME" "$SECONDDESCR"
 		SGID2="$SGID"
 
 		# Set Variables for Group #3
 		THIRDGROUPNAME="$GROUPNAME 3"
-		THIRDDESCR="$DESCRIPTION 101-$TOTALIPS"
+		THIRDDESCR="$DESCRIPTION 121-$TOTALIPS"
 
 		createGroups "$THIRDGROUPNAME" "$THIRDDESCR"
 		SGID3="$SGID"
 	fi
 
-	buildJSON100
+	buildJSON180
 	AuthorizeSecurityGroupIngress
 	cp json6 json
 	AuthorizeSecurityGroupIngress
@@ -590,33 +761,33 @@ validateGroupName
 
 probeIPs
 
-# Determine number of security groups needed since default AWS limit is 50 rules per group
+# Determine number of security groups needed since default AWS limit is 60 rules per group
 # https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Appendix_Limits.html#vpc-limits-security-groups
 
-# Create one group with 50 rules or less
+# Create one group with 60 rules or less
 if [ "$TOTALIPS" -gt "0" ]; then
-	if [ "$TOTALIPS" -lt "51" ]; then
-		fail "Support for less than 100 IPs has been depreciated."
+	if [ "$TOTALIPS" -lt "61" ]; then
+		fail "Support for 60 IPs or fewer has been depreciated."
 	fi
 fi
 
-# Create multiple groups for 51-100 rules
-if [ "$TOTALIPS" -gt "50" ]; then
-	if [ "$TOTALIPS" -lt "101" ]; then
-		fail "Support for less than 100 IPs has been depreciated."
+# Create multiple groups for 61-120 rules
+if [ "$TOTALIPS" -gt "60" ]; then
+	if [ "$TOTALIPS" -lt "121" ]; then
+		group120
 	fi
 fi
 
-# Create multiple groups for 101-150 rules
-if [ "$TOTALIPS" -gt "100" ]; then
-	if [ "$TOTALIPS" -lt "151" ]; then
-		group100
+# Create multiple groups for 121-180 rules
+if [ "$TOTALIPS" -gt "120" ]; then
+	if [ "$TOTALIPS" -lt "181" ]; then
+		group180
 	fi
 fi
 
-# More than 150 rules not yet supported
-if [ "$TOTALIPS" -gt "150" ]; then
-	fail "Greater than 150 IPs not yet supported."
+# More than 180 rules not yet supported
+if [ "$TOTALIPS" -gt "180" ]; then
+	fail "Greater than 180 IPs not yet supported."
 fi
 
 # Cleanup temp JSON files
