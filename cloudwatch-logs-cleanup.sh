@@ -87,7 +87,7 @@ function Warning(){
 	read -r -p "Are you sure you understand and want to continue? (y/n) " CONTINUE
 	HorizontalRule
 	if ! [[ $CONTINUE =~ ^([yY][eE][sS]|[yY])$ ]]; then
-		echo "Cancelled."
+		echo "Canceled."
 		tput sgr0
 		exit 1
 	fi

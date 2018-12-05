@@ -109,7 +109,7 @@ if [ "$CreateTemplateFile" = "true" ]; then
 		echo $TemplateFileName
 		read -r -p "Overwrite? (y/n) " OVERWRITE
 		if ! [[ $OVERWRITE =~ ^([yY][eE][sS]|[yY])$ ]]; then
-			echo "Cancelled."
+			echo "Canceled."
 			tput sgr0
 			exit 1
 		fi
@@ -169,7 +169,7 @@ if [ "$CreateNewELB" = "true" ]; then
 		echo "An ELB Named $NewELBname Already Exists!"
 		read -r -p "Continue and update the existing ELB $NewELBname with configuration from ELB $ELBname? (y/n) " CONTINUE
 		if ! [[ $CONTINUE =~ ^([yY][eE][sS]|[yY])$ ]]; then
-			echo "Cancelled."
+			echo "Canceled."
 			tput sgr0
 			exit 1
 		fi

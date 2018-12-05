@@ -209,7 +209,7 @@ function deleteExisting(){
 		fi
 		completed
 	else
-		echo "Cancelled."
+		echo "Canceled."
 		exit 1
 	fi
 }

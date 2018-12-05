@@ -70,7 +70,7 @@ fi
 
 read -r -p "Warning: this will delete all objects from the S3 bucket with storage type Glacier!  Proceed? (y/n) " Proceed
 if ! [[ $Proceed =~ ^([yY][eE][sS]|[yY])$ ]]; then
-	fail "Cancelled."
+	fail "Canceled."
 fi
 
 S3BUCKETREGION=$(aws s3api get-bucket-location --bucket "$S3BUCKET" --output text --profile $profile 2>&1)
