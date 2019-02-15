@@ -641,9 +641,37 @@ function validateGroupName(){
 		if [[ $deleteIPs =~ ^([yY][eE][sS]|[yY])$ ]]; then
 			deleteIPs
 		else
-			echo "Exiting"
-			exit 1
+			GroupsAlreadyExist="1"
+			findGroups
+		# 	echo "Exiting"
+		# 	exit 1
 		fi
+	fi
+}
+
+# Look up the security group IDs
+function findGroups(){
+	FindGroups=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$FindGroups"
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo "$FindGroups" | jq .
+	fi
+
+	# Assuming there are exactly 2 groups
+	SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 1" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+	SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 2" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+	# SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+
+	# if [[ -z $SGID1 ]] || [[ -z $SGID2 ]] || [[ -z $SGID3 ]]; then
+	if [[ -z $SGID1 ]] || [[ -z $SGID2 ]]; then
+		echo "Unable to lookup $GROUPNAME Security Group IDs."
+	fi
+	if [[ $DEBUGMODE = "1" ]]; then
+		echo DEBUG SGID1: "$SGID1"
+		echo DEBUG SGID2: "$SGID2"
+		# echo DEBUG SGID3: "$SGID3"
 	fi
 }
 
@@ -657,18 +685,19 @@ function deleteIPs(){
 		echo "$FindGroups" | jq .
 	fi
 
-	# Assuming there are exactly 3 groups
+	# Assuming there are exactly 2 groups
 	SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 1" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
 	SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 2" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
-	SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+	# SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
 
-	if [[ -z $SGID1 ]] || [[ -z $SGID2 ]] || [[ -z $SGID3 ]]; then
+	# if [[ -z $SGID1 ]] || [[ -z $SGID2 ]] || [[ -z $SGID3 ]]; then
+	if [[ -z $SGID1 ]] || [[ -z $SGID2 ]]; then
 		echo "Unable to lookup $GROUPNAME Security Group IDs."
 	fi
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo DEBUG SGID1: "$SGID1"
 		echo DEBUG SGID2: "$SGID2"
-		echo DEBUG SGID3: "$SGID3"
+		# echo DEBUG SGID3: "$SGID3"
 	fi
 
 	Group1IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID1" --profile $profile 2>&1)
@@ -679,22 +708,23 @@ function deleteIPs(){
 	if [ ! $? -eq 0 ]; then
 		fail "$Group2IPs"
 	fi
-	Group3IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID3" --profile $profile 2>&1)
-	if [ ! $? -eq 0 ]; then
-		fail "$Group3IPs"
-	fi
+	# Group3IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID3" --profile $profile 2>&1)
+	# if [ ! $? -eq 0 ]; then
+	# 	fail "$Group3IPs"
+	# fi
 
-	if [[ -z $Group1IPs ]] || [[ -z $Group2IPs ]] || [[ -z $Group3IPs ]]; then
+	# if [[ -z $Group1IPs ]] || [[ -z $Group2IPs ]] || [[ -z $Group3IPs ]]; then
+	if [[ -z $Group1IPs ]] || [[ -z $Group2IPs ]]; then
 		fail "Unable to parse $GROUPNAME Security Groups."
 	fi
 
 	Group1IPs=$(echo "$Group1IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
 	Group2IPs=$(echo "$Group2IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
-	Group3IPs=$(echo "$Group3IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
+	# Group3IPs=$(echo "$Group3IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo DEBUG Group1IPs: "$Group1IPs"
 		echo DEBUG Group2IPs: "$Group2IPs"
-		echo DEBUG Group3IPs: "$Group3IPs"
+		# echo DEBUG Group3IPs: "$Group3IPs"
 	fi
 
 	echo
@@ -715,14 +745,14 @@ function deleteIPs(){
 	fi
 	HorizontalRule
 
-	echo
-	HorizontalRule
-	echo "Removing IPs from $GROUPNAME 3, Security Group ID $SGID3"
-	RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --profile $profile --ip-permissions "$Group3IPs" 2>&1)
-	if [ ! $? -eq 0 ]; then
-		fail "$RemoveGroup3IPs"
-	fi
-	HorizontalRule
+	# echo
+	# HorizontalRule
+	# echo "Removing IPs from $GROUPNAME 3, Security Group ID $SGID3"
+	# RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --profile $profile --ip-permissions "$Group3IPs" 2>&1)
+	# if [ ! $? -eq 0 ]; then
+	# 	fail "$RemoveGroup3IPs"
+	# fi
+	# HorizontalRule
 
 	# Set flag so there is no attempt to create the groups again
 	GroupsAlreadyExist="1"
