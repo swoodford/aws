@@ -161,5 +161,8 @@ If your problem or idea is not addressed yet, [please open a new issue](https://
 - <https://github.com/swoodford>
 
 ## Copyright and License
-
+## new line added
+## one more line added
+## second more line added
+## one more line added
 Code and Documentation Copyright 2012-2018 Shawn Woodford. Code released under the [Apache License 2.0](https://github.com/swoodford/aws/blob/master/LICENSE.md).
