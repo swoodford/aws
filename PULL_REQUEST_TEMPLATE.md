@@ -3,7 +3,7 @@ Verify first that your issue/request is not already reported on GitHub.
 Also test if the latest release, and master branch are affected too.
 -->
 
-#### Issue Type
+## Issue Type
 <!--- Pick one below and delete the rest -->
  - Bug Report
  - Feature Request
