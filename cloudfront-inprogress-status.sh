@@ -4,7 +4,7 @@
 # Requires the AWS CLI and jq
 
 # Debug Mode
-DEBUGMODE="0"
+DEBUGMODE="1"
 
 
 # Functions
