@@ -5,7 +5,7 @@
 
 # Debug Mode
 DEBUGMODE="0"
-
+debug=1
 
 # Functions
 
