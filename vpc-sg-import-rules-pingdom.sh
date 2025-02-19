@@ -20,10 +20,10 @@ VPCID="YOUR-VPC-ID-HERE"
 PROTOCOL="tcp"
 # If allowing only one port use the same port number for both from and to vars below
 FROMPORT="80"
-TOPORT="443"
+TOPORT="80"
 
 # Debug Mode
-DEBUGMODE="0"
+DEBUGMODE=FALSE
 
 
 # Functions
@@ -87,11 +87,12 @@ fi
 # Get Pingdom IPv4 IPs
 # https://help.pingdom.com/hc/en-us/articles/203682601-How-to-get-all-Pingdom-probes-public-IP-addresses
 function probeIPs(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function probeIPs"
 	fi
-	wget --quiet -O- https://www.pingdom.com/rss/probe_servers.xml | \
-	perl -nle 'print $1 if /IP: (([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5]));/' | \
+	# wget --quiet -O- https://my.pingdom.com/probes/ipv4 | \
+	# perl -nle 'print $1 if /IP: (([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5]));/' | \
+	wget --quiet -O- https://my.pingdom.com/probes/ipv4 | \
 	sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 | \
 	uniq > pingdom-probe-servers.txt
 
@@ -109,15 +110,15 @@ function probeIPs(){
 
 # Create Security Groups
 function createGroups(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function createGroups"
 		echo var1: "$1"
 		echo var2: "$2"
 	fi
 	echo
 	HorizontalRule
-	echo "Creating Security Group: "$1
-	SGID=$(aws ec2 create-security-group --group-name "$1" --description "$2" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+	echo "Creating Security Group: $1 $FROMPORT"
+	SGID=$(aws ec2 create-security-group --group-name "$1 $FROMPORT" --description "$2" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
 	if [ ! $? -eq 0 ]; then
 		fail "$SGID"
 	fi
@@ -138,7 +139,7 @@ function createGroups(){
 
 # Builds the JSON for 61-120 rules
 function buildJSON120(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function buildJSON120"
 	fi
 	(
@@ -153,7 +154,7 @@ function buildJSON120(){
             "IpRanges": [
 EOP
 	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json1
 	fi
 	rm -f json2
@@ -162,7 +163,7 @@ EOP
 	for (( COUNT=$START; COUNT<=60; COUNT++ ))
 	do
 	iplist=$(nl pingdom-probe-servers.txt | grep -w [^0-9][[:space:]]$COUNT | cut -f 2)
-	# if [[ $DEBUGMODE = "1" ]]; then
+	# if $DEBUGMODE; then
 	# 	echo iplist:
 	# 	echo
 	# 	echo "$iplist"
@@ -178,13 +179,13 @@ EOP
 	) >> json2
 	done
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json2
 	fi
 
 	# Remove the last comma to close JSON array
 	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json3
 	fi
 
@@ -197,12 +198,12 @@ EOP
 EOP
 	) > json4
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json4
 	fi
 
 	cat json1 json3 json4 > json
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json
 	fi
 
@@ -219,7 +220,7 @@ EOP
             "IpRanges": [
 EOP
 	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json1
 	fi
 	rm -f json2
@@ -237,13 +238,13 @@ EOP
 	) >> json2
 	done
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json2
 	fi
 
 	# Remove the last comma to close JSON array
 	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json3
 	fi
 
@@ -256,12 +257,12 @@ EOP
 EOP
 	) > json4
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json4
 	fi
 
 	cat json1 json3 json4 > json6
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json6
 	fi
 
@@ -270,7 +271,7 @@ EOP
 
 # Builds the JSON for 121-180 rules
 function buildJSON180(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function buildJSON100"
 	fi
 	(
@@ -285,7 +286,7 @@ function buildJSON180(){
             "IpRanges": [
 EOP
 	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json1
 	fi
 	rm -f json2
@@ -303,13 +304,13 @@ EOP
 	) >> json2
 	done
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json2
 	fi
 
 	# Remove the last comma to close JSON array
 	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json3
 	fi
 
@@ -322,12 +323,12 @@ EOP
 EOP
 	) > json4
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json4
 	fi
 
 	cat json1 json3 json4 > json
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json
 	fi
 
@@ -344,7 +345,7 @@ EOP
             "IpRanges": [
 EOP
 	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json1
 	fi
 	rm -f json2
@@ -362,13 +363,13 @@ EOP
 	) >> json2
 	done
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json2
 	fi
 
 	# Remove the last comma to close JSON array
 	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json3
 	fi
 
@@ -381,12 +382,12 @@ EOP
 EOP
 	) > json4
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json4
 	fi
 
 	cat json1 json3 json4 > json6
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json6
 	fi
 
@@ -403,7 +404,7 @@ EOP
             "IpRanges": [
 EOP
 	) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json1
 	fi
 	rm -f json2
@@ -421,13 +422,13 @@ EOP
 	) >> json2
 	done
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json2
 	fi
 
 	# Remove the last comma to close JSON array
 	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json3
 	fi
 
@@ -440,19 +441,19 @@ EOP
 EOP
 	) > json4
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json4
 	fi
 
 	cat json1 json3 json4 > json7
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo built json7
 	fi
 }
 
 # Request ingress authorization to a security group from JSON file
 function AuthorizeSecurityGroupIngress(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function AuthorizeSecurityGroupIngress"
 	fi
 	if ! [ -f json ]; then
@@ -477,21 +478,21 @@ function AuthorizeSecurityGroupIngress(){
 
 # Create multiple groups for 61-120 rules
 function group120(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function group120"
 	fi
 
 	if ! [[ "$GroupsAlreadyExist" -eq "1" ]]; then
-		if [[ $DEBUGMODE = "1" ]]; then
+		if $DEBUGMODE; then
 			echo "Groups Do Not Already Exist..."
 		fi
 		# Set Variables for Group #1
 		FIRSTGROUPNAME="$GROUPNAME 1"
-		if [[ $DEBUGMODE = "1" ]]; then
+		if $DEBUGMODE; then
 			echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
 		fi
 		FIRSTDESCR="$DESCRIPTION 1-60"
-		if [[ $DEBUGMODE = "1" ]]; then
+		if $DEBUGMODE; then
 			echo "FIRSTDESCR: "$FIRSTDESCR
 		fi
 
@@ -515,21 +516,21 @@ function group120(){
 
 # Create multiple groups for 121-180 rules
 function group180(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function group100"
 	fi
 
 	if ! [[ "$GroupsAlreadyExist" -eq "1" ]]; then
-		if [[ $DEBUGMODE = "1" ]]; then
+		if $DEBUGMODE; then
 			echo "Groups Do Not Already Exist..."
 		fi
 		# Set Variables for Group #1
 		FIRSTGROUPNAME="$GROUPNAME 1"
-		if [[ $DEBUGMODE = "1" ]]; then
+		if $DEBUGMODE; then
 			echo "FIRSTGROUPNAME: "$FIRSTGROUPNAME
 		fi
 		FIRSTDESCR="$DESCRIPTION 1-60"
-		if [[ $DEBUGMODE = "1" ]]; then
+		if $DEBUGMODE; then
 			echo "FIRSTDESCR: "$FIRSTDESCR
 		fi
 
@@ -562,7 +563,7 @@ function group180(){
 
 # Validate VPC ID
 function validateVPCID(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function validateVPCID"
 	fi
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
@@ -619,13 +620,13 @@ function validateVPCID(){
 	if ! echo "$CHECKVPC" | grep -q "available"; then
 		fail $CHECKVPC
 	else
-		tput setaf 2; echo "VPC ID Validated" && tput sgr0
+		tput setaf 2; echo "VPC ID $VPCID Validated" && tput sgr0
 	fi
 }
 
 # Confirm the group with this name does not already exist in the VPC
 function validateGroupName(){
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
 		echo "function validateGroupName"
 		echo "GROUPNAME $GROUPNAME"
 	fi
@@ -633,8 +634,8 @@ function validateGroupName(){
 	if [ ! $? -eq 0 ]; then
 		fail "$validateGroupName"
 	fi
-	if echo "$validateGroupName" | egrep -iq "\b$GROUPNAME\b|\b$GROUPNAME 1\b"; then
-		tput setaf 1; echo Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b" | sort) already exist in specified VPC. && tput sgr0
+	if echo "$validateGroupName" | egrep -iq "\b$GROUPNAME\b|\b$GROUPNAME 1\b|\b$GROUPNAME $FROMPORT\b|\b$GROUPNAME $FROMPORT 1\b"; then
+		tput setaf 1; echo Security Group\(s\) $(echo "$validateGroupName" | egrep -i "\b$GROUPNAME\b|\b$GROUPNAME 1\b|\b$GROUPNAME $FROMPORT\b|\b$GROUPNAME $FROMPORT 1\b" | sort) already exist in specified VPC. && tput sgr0
 
 		# TODO: This part is too complicated to handle smoothly...
 		tput setaf 1; read -r -p "Do you want to remove the existing IPs and add new IPs? (y/n) " deleteIPs && tput sgr0
@@ -655,22 +656,22 @@ function findGroups(){
 	if [ ! $? -eq 0 ]; then
 		fail "$FindGroups"
 	fi
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo "$FindGroups" | jq .
+	if $DEBUGMODE; then
+		echo "findGroups: $FindGroups" | jq .
 	fi
 
 	# Assuming there are exactly 2 groups
-	SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 1" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
-	SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 2" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
-	# SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+	SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME $FROMPORT 1" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
+	SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME $FROMPORT 2" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
+	# SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
 
 	# if [[ -z $SGID1 ]] || [[ -z $SGID2 ]] || [[ -z $SGID3 ]]; then
 	if [[ -z $SGID1 ]] || [[ -z $SGID2 ]]; then
 		echo "Unable to lookup $GROUPNAME Security Group IDs."
 	fi
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo DEBUG SGID1: "$SGID1"
-		echo DEBUG SGID2: "$SGID2"
+	if $DEBUGMODE; then
+		echo findGroups DEBUG SGID1: "$SGID1"
+		echo findGroups DEBUG SGID2: "$SGID2"
 		# echo DEBUG SGID3: "$SGID3"
 	fi
 }
@@ -681,47 +682,65 @@ function deleteIPs(){
 	if [ ! $? -eq 0 ]; then
 		fail "$FindGroups"
 	fi
-	if [[ $DEBUGMODE = "1" ]]; then
+	if $DEBUGMODE; then
+		echo "deleteIPs FindGroups:"
 		echo "$FindGroups" | jq .
 	fi
 
 	# Assuming there are exactly 2 groups
-	SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 1" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
-	SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 2" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
-	# SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName==$GROUPNAME) | .GroupId' | cut -d \" -f2)
+	SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME $FROMPORT 1" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
+	SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME $FROMPORT 2" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
+	# SGID3=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 3" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
+
+	if $DEBUGMODE; then
+		echo deleteIPs DEBUG SGID1: "$SGID1"
+		echo deleteIPs DEBUG SGID2: "$SGID2"
+	fi
 
 	# if [[ -z $SGID1 ]] || [[ -z $SGID2 ]] || [[ -z $SGID3 ]]; then
 	if [[ -z $SGID1 ]] || [[ -z $SGID2 ]]; then
-		echo "Unable to lookup $GROUPNAME Security Group IDs."
-	fi
-	if [[ $DEBUGMODE = "1" ]]; then
-		echo DEBUG SGID1: "$SGID1"
-		echo DEBUG SGID2: "$SGID2"
-		# echo DEBUG SGID3: "$SGID3"
+		SGID1=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 1" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
+		SGID2=$(echo "$FindGroups" | jq -r --arg GROUPNAME "$GROUPNAME 2" '.SecurityGroups | .[] | select(.GroupName | startswith($GROUPNAME)) | .GroupId' | cut -d \" -f2)
+		if $DEBUGMODE; then
+			echo deleteIPs step 2 DEBUG SGID1: "$SGID1"
+			echo deleteIPs step 2 DEBUG SGID2: "$SGID2"
+		fi
+		if [[ -z $SGID1 ]] || [[ -z $SGID2 ]]; then
+			fail "Unable to lookup $GROUPNAME Security Group IDs."
+		fi
 	fi
 
-	Group1IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID1" --profile $profile 2>&1)
+	Group1=$(aws ec2 describe-security-groups --output=json --group-id "$SGID1" --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
-		fail "$Group1IPs"
+		fail "$Group1"
 	fi
-	Group2IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID2" --profile $profile 2>&1)
+	Group2=$(aws ec2 describe-security-groups --output=json --group-id "$SGID2" --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
-		fail "$Group2IPs"
+		fail "$Group2"
 	fi
 	# Group3IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID3" --profile $profile 2>&1)
 	# if [ ! $? -eq 0 ]; then
 	# 	fail "$Group3IPs"
 	# fi
 
-	# if [[ -z $Group1IPs ]] || [[ -z $Group2IPs ]] || [[ -z $Group3IPs ]]; then
-	if [[ -z $Group1IPs ]] || [[ -z $Group2IPs ]]; then
+	if $DEBUGMODE; then
+		echo DEBUG Group1IPs: "$Group1"
+		echo DEBUG Group2IPs: "$Group2"
+		# echo DEBUG Group3IPs: "$Group3IPs"
+	fi
+
+	# if [[ -z $Group1 ]] || [[ -z $Group2 ]] || [[ -z $Group3IPs ]]; then
+	if [[ -z $Group1 ]] || [[ -z $Group2 ]]; then
 		fail "Unable to parse $GROUPNAME Security Groups."
 	fi
 
-	Group1IPs=$(echo "$Group1IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
-	Group2IPs=$(echo "$Group2IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
-	# Group3IPs=$(echo "$Group3IPs" | jq '.SecurityGroups | .[] | .IpPermissions')
-	if [[ $DEBUGMODE = "1" ]]; then
+	Group1Name=$(echo "$Group1" | jq '.SecurityGroups | .[] | .GroupName')
+	Group2Name=$(echo "$Group2" | jq '.SecurityGroups | .[] | .GroupName')
+
+	Group1IPs=$(echo "$Group1" | jq '.SecurityGroups | .[] | .IpPermissions')
+	Group2IPs=$(echo "$Group2" | jq '.SecurityGroups | .[] | .IpPermissions')
+	# Group3IPs=$(echo "$Group3" | jq '.SecurityGroups | .[] | .IpPermissions')
+	if $DEBUGMODE; then
 		echo DEBUG Group1IPs: "$Group1IPs"
 		echo DEBUG Group2IPs: "$Group2IPs"
 		# echo DEBUG Group3IPs: "$Group3IPs"
@@ -729,7 +748,7 @@ function deleteIPs(){
 
 	echo
 	HorizontalRule
-	echo "Removing IPs from $GROUPNAME 1, Security Group ID $SGID1"
+	echo "Removing IPs from $Group1Name, Security Group ID $SGID1"
 	RemoveGroup1IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID1" --profile $profile --ip-permissions "$Group1IPs" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$RemoveGroup1IPs"
@@ -738,7 +757,7 @@ function deleteIPs(){
 
 	echo
 	HorizontalRule
-	echo "Removing IPs from $GROUPNAME 2, Security Group ID $SGID2"
+	echo "Removing IPs from $Group2Name, Security Group ID $SGID2"
 	RemoveGroup2IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID2" --profile $profile --ip-permissions "$Group2IPs" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$RemoveGroup2IPs"
@@ -747,7 +766,7 @@ function deleteIPs(){
 
 	# echo
 	# HorizontalRule
-	# echo "Removing IPs from $GROUPNAME 3, Security Group ID $SGID3"
+	# echo "Removing IPs from $Group3Name, Security Group ID $SGID3"
 	# RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --profile $profile --ip-permissions "$Group3IPs" 2>&1)
 	# if [ ! $? -eq 0 ]; then
 	# 	fail "$RemoveGroup3IPs"
@@ -761,7 +780,7 @@ function deleteIPs(){
 # Run the script and call functions
 
 # Check for required applications
-check_command jq wget perl
+check_command jq wget
 
 validateVPCID
 
@@ -773,15 +792,15 @@ HorizontalRule
 echo
 tput setaf 1; echo "Please review all settings before continuing..." && tput sgr0
 echo
-echo "AWS CLI Profile Name: "$profile
-echo "Group Name: "$GROUPNAME
-echo "Group Description: "$DESCRIPTION
-echo "VPC ID: "$VPCID
-echo "Protocol: "$PROTOCOL
+echo "AWS CLI Profile Name: $profile"
+echo "Group Name: $GROUPNAME $FROMPORT"
+echo "Group Description: $DESCRIPTION"
+echo "VPC ID: $VPCID"
+echo "Protocol: $PROTOCOL"
 if [ "$FROMPORT" -eq "$TOPORT" ]; then
-	echo "Port: "$FROMPORT
+	echo "Port: $FROMPORT"
 else
-	echo "Port Range: "$FROMPORT-$TOPORT
+	echo "Port Range: $FROMPORT-$TOPORT"
 fi
 echo
 pause
