@@ -140,7 +140,8 @@ Debian/Ubuntu:
 #### WAF
 - **[waf-export-ip-sets.sh](waf-export-ip-sets.sh)** Export each AWS WAF IP set match condition to a JSON file for backup
 - **[waf-import-ip-set-facebook.sh](waf-import-ip-set-facebook.sh)** Import list of current [Facebook](https://www.facebook.com/) crawl server IPs into AWS WAF IP Set - work in progress, currently not possible to execute
-- **[waf-web-acl-pingdom.sh](waf-web-acl-pingdom.sh)** Manage WAF Web ACL to allow current [Pingdom](https://www.pingdom.com/) probe server IPs by creating or updating AWS WAF IP Addresses Set, Rules and Web ACLs
+- **[waf-web-acl-pingdom.sh](waf-web-acl-pingdom.sh)** (Deprecated - see [wafv2-web-acl-pingdom.sh](wafv2-web-acl-pingdom.sh) ) Manage WAF Web ACL to allow current [Pingdom](https://www.pingdom.com/) probe server IPs by creating or updating AWS WAF IP Addresses Set, Rules and Web ACLs
+- **[wafv2-web-acl-pingdom.sh](wafv2-web-acl-pingdom.sh)** Manage WAFv2 Web ACL to allow current [Pingdom](https://www.pingdom.com/) probe server IPs by creating or updating AWS WAFv2 IP Addresses Set, Rules and Web ACLs
 
 ![other tools](/images/gears.png)
 #### Other Tools

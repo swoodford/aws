@@ -5,7 +5,7 @@
 
 # Set Variables
 GROUPNAME="Cloudflare"
-DESCR="Cloudflare IP Ranges"
+DESCRIPTION="Cloudflare IP Ranges"
 VPCID="YOUR-VPC-ID-HERE"
 # VPCID=$(aws ec2 describe-vpcs --output=json | jq '.Vpcs | .[] | .VpcId' | cut -d '"' -f2)
 PROTO="tcp"
@@ -29,10 +29,10 @@ function fail(){
 	exit 1
 }
 
-# Ensure Variables are set
-if [ "$VPCID" = "YOUR-VPC-ID-HERE" ]; then
-	fail "Failed to set variables!"
-fi
+# # Ensure Variables are set
+# if [ "$VPCID" = "YOUR-VPC-ID-HERE" ]; then
+# 	fail "Failed to set variables!"
+# fi
 
 # Verify AWS CLI Credentials are setup
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
@@ -59,6 +59,69 @@ fi
 if ! aws sts get-caller-identity --profile $profile 2>&1 | grep -q "UserId"; then
 	fail "Invalid AWS CLI profile or credentials not setup. Please run \"aws configure\"."
 fi
+
+# Validate VPC ID
+function validateVPCID(){
+	if $DEBUGMODE; then
+		echo "function validateVPCID"
+	fi
+	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
+		# Count number of VPCs
+		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		if [ ! $? -eq 0 ]; then
+			fail "$DESCRIBEVPCS"
+		fi
+		if echo $DESCRIBEVPCS | egrep -iq "error|not"; then
+			fail "$DESCRIBEVPCS"
+		fi
+		NUMVPCS=$(echo $DESCRIBEVPCS | jq '.Vpcs | length')
+		if [ ! $? -eq 0 ]; then
+			fail "$NUMVPCS"
+		fi
+		if echo $NUMVPCS | egrep -iq "error|not|invalid"; then
+			fail "$NUMVPCS"
+		fi
+
+		# If only one VPC, use that ID
+		if [ "$NUMVPCS" -eq "1" ]; then
+			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if [ ! $? -eq 0 ]; then
+				fail "$VPCID"
+			fi
+		else
+			FOUNDVPCS=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
+			if [ ! $? -eq 0 ]; then
+				fail "$FOUNDVPCS"
+			fi
+			if echo $FOUNDVPCS | egrep -iq "error|not|invalid"; then
+				fail "$FOUNDVPCS"
+			fi
+
+			HorizontalRule
+			echo "Found VPCs:"
+			HorizontalRule
+			# Get VPC Names
+			for vpcid in $FOUNDVPCS; do
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" --profile $profile 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+			done
+			echo
+			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
+			if [ -z "$VPCID" ]; then
+				fail "Must specify a valid VPC ID."
+			fi
+		fi
+	fi
+
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$CHECKVPC"
+	fi
+	if ! echo "$CHECKVPC" | grep -q "available"; then
+		fail $CHECKVPC
+	else
+		tput setaf 2; echo "VPC ID $VPCID Validated" && tput sgr0
+	fi
+}
 
 # Get current list of Cloudflare IP ranges
 IPV4LIST=$(curl -s https://www.cloudflare.com/ips-v4)
@@ -114,7 +177,7 @@ function checkGroups (){
 		echo
 		echo "====================================================="
 		echo "Creating Security Group: "$GROUPNAME
-		GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
+		GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
 		if $DEBUG; then
 			echo "GROUPID: $GROUPID"
 		fi
@@ -143,7 +206,7 @@ function checkGroups (){
 				echo
 				echo "====================================================="
 				echo "Creating Security Group: "$GROUPNAME
-				GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
+				GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d '"' -f2)
 				echo $GROUPID
 				aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | select(.GroupName=="'"$GROUPNAME"'") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1
 				echo "====================================================="
@@ -172,7 +235,7 @@ function addRules (){
 	echo
 	if $DEBUG; then
 		echo "GROUPNAME: $GROUPNAME"
-		echo "DESCR: $DESCR"
+		echo "DESCRIPTION: $DESCRIPTION"
 		echo "VPCID: $VPCID"
 		echo "PROTO: $PROTO"
 		echo "PORT: $PORT"
@@ -197,7 +260,7 @@ function addRules (){
 				RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --protocol $PROTO --port $PORT --cidr "$ip" --profile $profile 2>&1)
 				# Check for errors
 				if echo "$RESULT" | grep -q error; then
-					fail "$RESULT"
+					echo "$RESULT"
 				else
 					if $DEBUG; then
 						echo "$RESULT"
@@ -218,7 +281,7 @@ function addRules (){
 			RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --protocol $PROTO --port $PORT --cidr "$ip" --profile $profile 2>&1)
 			# Check for errors
 			if echo "$RESULT" | grep -q error; then
-				fail "$RESULT"
+				echo "$RESULT"
 			else
 				if $DEBUG; then
 					echo "$RESULT"
@@ -237,7 +300,7 @@ function addRulesV6 (){
 	echo
 	if $DEBUG; then
 		echo "GROUPNAME: $GROUPNAME"
-		echo "DESCR: $DESCR"
+		echo "DESCRIPTION: $DESCRIPTION"
 		echo "VPCID: $VPCID"
 		echo "PROTO: $PROTO"
 		echo "PORT: $PORT"
@@ -260,7 +323,7 @@ function addRulesV6 (){
 				RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --ip-permissions IpProtocol=$PROTO,FromPort=$PORT,ToPort=$PORT,Ipv6Ranges=[{CidrIpv6="$ip"}] --profile $profile 2>&1)
 				# Check for errors
 				if echo "$RESULT" | grep -q error; then
-					fail "$RESULT"
+					echo "$RESULT"
 				else
 					if $DEBUG; then
 						echo "$RESULT"
@@ -279,7 +342,7 @@ function addRulesV6 (){
 			RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --ip-permissions IpProtocol=$PROTO,FromPort=$PORT,ToPort=$PORT,Ipv6Ranges=[{CidrIpv6="$ip"}] --profile $profile 2>&1)
 			# Check for errors
 			if echo "$RESULT" | grep -q error; then
-				fail "$RESULT"
+				echo "$RESULT"
 			else
 				if $DEBUG; then
 					echo "$RESULT"
@@ -293,12 +356,14 @@ function addRulesV6 (){
 check_command "curl"
 check_command "jq"
 
+validateVPCID
 checkGroups
 
 echo "====================================================="
 echo
-checkGroups=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
-if ! echo "$checkGroups" | grep -q "$GROUPNAME"; then
+
+confirmGroups=$(aws ec2 describe-security-groups --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
+if ! echo "$confirmGroups" | grep -q "$GROUPNAME"; then
 	fail "Failed to create security group!"
 else
 	echo "Security Group Created: $GROUPNAME: $GROUPID"

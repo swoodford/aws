@@ -15,7 +15,7 @@ DATE=$(date "+%Y-%m-%d")
 CONDITIONNAME=$CONDITIONNAME-$DATE
 
 # Debug Mode
-DEBUGMODE="0"
+DEBUGMODE=false
 
 
 # Functions
@@ -40,6 +40,8 @@ function fail(){
 	tput setaf 1; echo "Failure: $*" && tput sgr0
 	exit 1
 }
+
+fail "The WAF v1 is deprecated. Please use wafv2-web-acl-pingdom.sh instead."
 
 # Horizontal Rule
 function HorizontalRule(){
@@ -70,8 +72,8 @@ fi
 
 # Get Pingdom IPv4 IPs
 function GetProbeIPs(){
-	wget --quiet -O- https://www.pingdom.com/rss/probe_servers.xml | \
-	perl -nle 'print $1 if /IP: (([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5]));/' | \
+	wget --quiet -O- https://my.pingdom.com/probes/ipv4 | \
+	# perl -nle 'print $1 if /IP: (([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5])\.([01]?\d\d?|2[0-4]\d|25[0-5]));/' | \
 	sort -n -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 > iplist
 
 	TOTALIPS=$(cat iplist | wc -l | tr -d ' ')
@@ -91,13 +93,18 @@ function GetProbeIPs(){
 
 # Gets a Change Token
 function ChangeToken(){
-	CHANGETOKEN=$(aws waf get-change-token --profile $profile 2>&1 | jq '.ChangeToken' | cut -d '"' -f2)
+	CHANGETOKEN=$(aws waf get-change-token --profile $profile 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$CHANGETOKEN"
+	else
+		CHANGETOKEN=$(echo "$CHANGETOKEN" | jq '.ChangeToken' | cut -d '"' -f2)
 	fi
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "CHANGETOKEN: "$CHANGETOKEN
 	fi
+	# if echo $UPDATERULE | jq '.ChangeToken' | grep -q error; then
+	# 	fail "$UPDATERULE"
+	# fi
 }
 
 # Checks the status of a single changetoken
@@ -133,7 +140,7 @@ cat << EOP
     "Updates": [
 EOP
 ) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json1
 	fi
 	if [ -f json2 ]; then
@@ -154,13 +161,13 @@ cat << EOP
 EOP
 ) >> json2
 	done < iplist
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json2
 	fi
 
 	# Remove the last comma to close JSON array
 	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json3
 	fi
 
@@ -171,12 +178,12 @@ cat << 'EOP'
 EOP
 ) > json4
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json4
 	fi
 
 	cat json1 json3 json4 > json5
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json5
 	fi
 
@@ -194,7 +201,7 @@ cat << EOP
     "Updates": [
 EOP
 ) > json1
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json1
 	fi
 	if [ -f json2 ]; then
@@ -215,13 +222,13 @@ cat << EOP
 EOP
 ) >> json2
 	done < iplist-existing
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json2
 	fi
 
 	# Remove the last comma to close JSON array
 	cat json2 | sed '$ s/.$//' > json3
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json3
 	fi
 
@@ -232,12 +239,12 @@ cat << 'EOP'
 EOP
 ) > json4
 
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json4
 	fi
 
 	cat json1 json3 json4 > json5
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo built json5
 	fi
 
@@ -283,6 +290,9 @@ function CreateIPSet(){
 	ChangeToken
 	IPSETID=$(aws waf create-ip-set --name "$CONDITIONNAME" --change-token $CHANGETOKEN --profile $profile 2>&1 | jq '.IPSet | .IPSetId' | cut -d '"' -f2)
 	if [ ! $? -eq 0 ]; then
+		if [[ $DEBUGMODE ]]; then
+			echo "IPSETID: "$IPSETID
+		fi
 		fail "$IPSETID"
 	fi
 	echo "IP Set ID:" "$IPSETID"
@@ -294,7 +304,7 @@ function ListIPSets(){
 	if [ ! $? -eq 0 ]; then
 		fail "$IPSETID"
 	fi
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "ListIPSets IPSETID: "$IPSETID
 	fi
 }
@@ -305,7 +315,7 @@ function GetIPSet(){
 	if [ ! $? -eq 0 ]; then
 		fail "$GetIPSet"
 	fi
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "GetIPSet: "$GetIPSet
 	fi
 }
@@ -317,7 +327,7 @@ function CreateRule(){
 	if [ ! $? -eq 0 ]; then
 		fail "$CreateRule"
 	fi
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "CreateRule: "$CreateRule
 	fi
 	RULEID=$(echo "$CreateRule" | jq '.Rule | .RuleId' | cut -d '"' -f2)
@@ -384,12 +394,12 @@ function UpdateACL(){
 # Inserts a single IP into the IP Set from the var iplist and reports status using the changetoken
 function InsertIPSet(){
 	ChangeToken
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "IPSETID: "$IPSETID
 		echo "IP: "$iplist
 	fi
 	UpdateSetInsert
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "UPDATESET: "$UPDATESET
 	fi
 	echo $CHANGETOKEN >> changetokenlist
@@ -400,12 +410,12 @@ function InsertIPSet(){
 # Deletes a single IP from the IP Set using the var iplist and reports status using the changetoken
 function DeleteIPSet(){
 	ChangeToken
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "IPSETID: "$IPSETID
 		echo "IP: "$iplist
 	fi
 	UpdateSetDelete
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo "UPDATESET: "$UPDATESET
 	fi
 	echo $CHANGETOKEN >> changetokenlist
@@ -426,7 +436,7 @@ function ExportExistingIPSet(){
 	fi
 	echo "$GetIPSet" >> iplist-existing
 	CountIPSetIPs=$(echo "$GetIPSet" | wc -l)
-	if [[ $DEBUGMODE = "1" ]]; then
+	if [[ $DEBUGMODE ]]; then
 		echo IPs in set $CONDITIONNAME: $CountIPSetIPs
 	fi
 }
@@ -584,6 +594,14 @@ function WAF(){
 			# 	# echo "====================================================="
 			# fi
 
+# Ensure AWS profile has necessary permissions
+function preflightChecks(){
+	ListIPSets=$(aws waf list-ip-sets --limit 99 --output=json --profile $profile 2>&1)
+	if [ ! $? -eq 0 ]; then
+		fail "$ListIPSets"
+	fi
+	ChangeToken
+}
 
 # Check required commands
 check_command "aws"
@@ -598,6 +616,7 @@ fi
 
 # TOTALIPS=$(wc -l iplist | cut -d " " -f7)
 
+preflightChecks
 WAF
 
 # CheckStatus
