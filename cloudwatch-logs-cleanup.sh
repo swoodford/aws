@@ -106,7 +106,7 @@ function GetRegions(){
 		echo "Begin GetRegions Function"
 	fi
 	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
-	if echo "$AWSregions" | egrep -iq "error|not"; then
+	if echo "$AWSregions" | egrep -iq "error|not-opted-in"; then
 		fail "$AWSregions"
 	else
 		ParseRegions=$(echo "$AWSregions" | jq '.Regions | .[] | .RegionName'| cut -d \" -f2 | sort)
