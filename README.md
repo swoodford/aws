@@ -6,7 +6,7 @@
 
 #### [https://github.com/swoodford/aws](https://github.com/swoodford/aws)
 
-## Table of contents
+## Table of contents-
 
 - [Why](#why)
 - [Getting Started](#getting-started)
