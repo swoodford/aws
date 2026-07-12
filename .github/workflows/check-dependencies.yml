@@ -1,0 +1,92 @@
+name: Check Dependencies
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  check-tools:
+    runs-on: ubuntu-latest
+    name: Verify Tool Availability and Versions
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+          pip install awscli
+
+      - name: Check AWS CLI
+        run: |
+          echo "AWS CLI Version:"
+          aws --version
+          if ! command -v aws &> /dev/null; then
+            echo "ERROR: aws command not found"
+            exit 1
+          fi
+
+      - name: Check jq
+        run: |
+          echo "jq Version:"
+          jq --version
+          if ! command -v jq &> /dev/null; then
+            echo "ERROR: jq command not found"
+            exit 1
+          fi
+
+      - name: Check curl
+        run: |
+          echo "curl Version:"
+          curl --version
+          if ! command -v curl &> /dev/null; then
+            echo "ERROR: curl command not found"
+            exit 1
+          fi
+
+      - name: Check standard Unix tools
+        run: |
+          for tool in sed grep cut sort date awk uniq; do
+            if ! command -v "$tool" &> /dev/null; then
+              echo "ERROR: $tool command not found"
+              exit 1
+            fi
+          done
+          echo "All standard Unix tools are available"
+
+  scan-dependencies:
+    runs-on: ubuntu-latest
+    name: Scan for Known Vulnerabilities
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Trivy scan on dependencies
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
+
+  validate-scripts:
+    runs-on: ubuntu-latest
+    name: Validate Shell Scripts
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          severity: 'warning'
