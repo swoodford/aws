@@ -10,6 +10,7 @@
 
 - [Why](#why)
 - [Getting Started](#getting-started)
+- [Documentation](#documentation)
 - [What's Included](#tools-included-in-this-repo)
 - [Bugs and Feature Requests](#bugs-and-feature-requests)
 - [Creator](#creator)
@@ -72,6 +73,35 @@ Amazon Linux AMI, RHEL, CentOS:
 Debian/Ubuntu:
 
 `$ sudo apt-get install jq`
+
+
+## Documentation
+
+This repository includes comprehensive guides for using these AWS CLI scripts:
+
+- **[USECASES.md](USECASES.md)** - Detailed use cases and examples organized by AWS service
+  - Real-world scenarios for EC2, S3, CloudWatch, VPC, and more
+  - Example AWS CLI commands for each script
+  - Best practices and security considerations
+
+- **[EXAMPLES.md](EXAMPLES.md)** - Practical command examples and advanced automation
+  - Quick start examples for common tasks
+  - Advanced patterns and CI/CD integration
+  - Troubleshooting tips and performance optimization
+
+- **[DEPENDENCIES.md](DEPENDENCIES.md)** - External tool requirements and installation
+  - Required tools: AWS CLI, jq, curl
+  - Installation instructions for macOS, Linux, and RHEL
+  - Verification and version information
+
+### Quick Links by Use Case
+
+- **Backup & Disaster Recovery**: [S3 Backup Guide](USECASES.md#s3-backup--lifecycle)
+- **Security & Compliance**: [S3 Security Audit](USECASES.md#s3-security-audit)
+- **Cost Optimization**: [Bucket Size Analysis](USECASES.md#s3-bucket-size-analysis)
+- **Infrastructure Monitoring**: [CloudWatch Alarms](USECASES.md#cloudwatch-alarms)
+- **Log Analysis**: [CloudWatch Logs](USECASES.md#cloudwatch-logs-management)
+- **Network Management**: [Security Groups](USECASES.md#security-group-management)
 
 
 ## Tools included in this repo:
