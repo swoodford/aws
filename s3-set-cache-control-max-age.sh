@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # Set Cache-Control public with max-age value on AWS S3 bucket website assets for all filetypes
 # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 
@@ -89,7 +96,7 @@ if ! [ "$MAXAGE" -ge "0" ] || ! [ "$MAXAGE" -le "31536000" ]; then
 fi
 
 # Determine the bucket region
-REGION=$(aws s3api get-bucket-location --bucket $BUCKET --output text --profile $profile 2>&1)
+REGION=$(aws s3api get-bucket-location --bucket $BUCKET --output text 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$REGION"
 fi
@@ -98,7 +105,7 @@ if echo $REGION | grep -q "None"; then
 fi
 
 message "Setting Cache-Control Max-Age $MAXAGE for all assets in S3 Bucket $BUCKET"
-set=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --cache-control "public, max-age=$MAXAGE" --metadata-directive "REPLACE" 2>&1)
+set=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --cache-control "public, max-age=$MAXAGE" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$set"
 fi

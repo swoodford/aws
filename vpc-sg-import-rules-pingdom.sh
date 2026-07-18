@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will save a list of current Pingdom IPv4 probe server IPs in the file pingdom-probe-servers.txt
 # Then create an AWS VPC Security Group with rules to allow access to each IP at the port specified.
 
@@ -118,7 +125,7 @@ function createGroups(){
 	echo
 	HorizontalRule
 	echo "Creating Security Group: $1 $FROMPORT"
-	SGID=$(aws ec2 create-security-group --group-name "$1 $FROMPORT" --description "$2" --vpc-id $VPCID --profile $profile 2>&1 | jq '.GroupId' | cut -d \" -f2)
+	SGID=$(aws ec2 create-security-group --group-name "$1 $FROMPORT" --description "$2" --vpc-id $VPCID 2>&1 | jq '.GroupId' | cut -d \" -f2)
 	if [ ! $? -eq 0 ]; then
 		fail "$SGID"
 	fi
@@ -126,7 +133,7 @@ function createGroups(){
 		fail "$SGID"
 	fi
 	echo "Security Group ID:" $SGID
-	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$1" --profile $profile 2>&1)
+	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$1" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$TAG"
 	fi
@@ -465,7 +472,7 @@ function AuthorizeSecurityGroupIngress(){
 	echo "Adding rules to security groups..."
 	HorizontalRule
 	echo
-	AUTHORIZE=$(aws ec2 authorize-security-group-ingress --cli-input-json "$json" --profile $profile 2>&1)
+	AUTHORIZE=$(aws ec2 authorize-security-group-ingress --cli-input-json "$json" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$AUTHORIZE"
 	fi
@@ -568,7 +575,7 @@ function validateVPCID(){
 	fi
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
-		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		DESCRIBEVPCS=$(aws ec2 describe-vpcs 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$DESCRIBEVPCS"
 		fi
@@ -603,7 +610,7 @@ function validateVPCID(){
 			HorizontalRule
 			# Get VPC Names
 			for vpcid in $FOUNDVPCS; do
-				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" --profile $profile 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
 			done
 			echo
 			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
@@ -613,7 +620,7 @@ function validateVPCID(){
 		fi
 	fi
 
-	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$CHECKVPC"
 	fi
@@ -630,7 +637,7 @@ function validateGroupName(){
 		echo "function validateGroupName"
 		echo "GROUPNAME $GROUPNAME"
 	fi
-	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
+	validateGroupName=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json 2>&1 | jq '.SecurityGroups | .[] | .GroupName')
 	if [ ! $? -eq 0 ]; then
 		fail "$validateGroupName"
 	fi
@@ -652,7 +659,7 @@ function validateGroupName(){
 
 # Look up the security group IDs
 function findGroups(){
-	FindGroups=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1)
+	FindGroups=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$FindGroups"
 	fi
@@ -678,7 +685,7 @@ function findGroups(){
 
 # Remove the existing IPs and add new IPs
 function deleteIPs(){
-	FindGroups=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1)
+	FindGroups=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$FindGroups"
 	fi
@@ -710,15 +717,15 @@ function deleteIPs(){
 		fi
 	fi
 
-	Group1=$(aws ec2 describe-security-groups --output=json --group-id "$SGID1" --profile $profile 2>&1)
+	Group1=$(aws ec2 describe-security-groups --output=json --group-id "$SGID1" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Group1"
 	fi
-	Group2=$(aws ec2 describe-security-groups --output=json --group-id "$SGID2" --profile $profile 2>&1)
+	Group2=$(aws ec2 describe-security-groups --output=json --group-id "$SGID2" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Group2"
 	fi
-	# Group3IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID3" --profile $profile 2>&1)
+	# Group3IPs=$(aws ec2 describe-security-groups --output=json --group-id "$SGID3" 2>&1)
 	# if [ ! $? -eq 0 ]; then
 	# 	fail "$Group3IPs"
 	# fi
@@ -749,7 +756,7 @@ function deleteIPs(){
 	echo
 	HorizontalRule
 	echo "Removing IPs from $Group1Name, Security Group ID $SGID1"
-	RemoveGroup1IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID1" --profile $profile --ip-permissions "$Group1IPs" 2>&1)
+	RemoveGroup1IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID1" --ip-permissions "$Group1IPs" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$RemoveGroup1IPs"
 	fi
@@ -758,7 +765,7 @@ function deleteIPs(){
 	echo
 	HorizontalRule
 	echo "Removing IPs from $Group2Name, Security Group ID $SGID2"
-	RemoveGroup2IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID2" --profile $profile --ip-permissions "$Group2IPs" 2>&1)
+	RemoveGroup2IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID2" --ip-permissions "$Group2IPs" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$RemoveGroup2IPs"
 	fi
@@ -767,7 +774,7 @@ function deleteIPs(){
 	# echo
 	# HorizontalRule
 	# echo "Removing IPs from $Group3Name, Security Group ID $SGID3"
-	# RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --profile $profile --ip-permissions "$Group3IPs" 2>&1)
+	# RemoveGroup3IPs=$(aws ec2 revoke-security-group-ingress --output=json --group-id "$SGID3" --ip-permissions "$Group3IPs" 2>&1)
 	# if [ ! $? -eq 0 ]; then
 	# 	fail "$RemoveGroup3IPs"
 	# fi

@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will set CloudWatch StatusCheckFailed Alarms with Recovery Action for all running EC2 Instances in all regions available
 # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/UsingAlarmActions.html#AddingRecoverActions
 
@@ -80,7 +87,7 @@ check_command "jq"
 
 # # Verify ALARMACTION is setup with some alert mechanism
 # if [[ -z $ALARMACTION ]] || [[ "$ALARMACTION" == "arn:aws:sns:us-east-1:YOURACCOUNTNUMBER:YOURSNSALERTNAME" ]]; then
-# 	SNSTopics=$(aws sns list-topics --profile $profile 2>&1)
+# 	SNSTopics=$(aws sns list-topics 2>&1)
 # 	if [ ! $? -eq 0 ]; then
 # 		fail "$SNSTopics"
 # 	fi
@@ -114,7 +121,7 @@ function GetRegions(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin GetRegions Function"
 	fi
-	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
+	AWSregions=$(aws ec2 describe-regions --output=json 2>&1)
 	if echo "$AWSregions" | egrep -iq "error|not"; then
 		fail "$AWSregions"
 	else
@@ -153,7 +160,7 @@ function ListInstances(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin ListInstances Function"
 	fi
-	Instances=$(aws ec2 describe-instances --filters Name=instance-state-name,Values=running --region $Region --output=json --profile $profile 2>&1)
+	Instances=$(aws ec2 describe-instances --filters Name=instance-state-name,Values=running --region $Region --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Instances"
 	else
@@ -193,7 +200,7 @@ function SetAlarms(){
 			echo "Instance: $InstanceID"
 			pause
 		fi
-		InstanceNameTag=$(aws ec2 describe-tags --filters Name=key,Values=Name Name=resource-id,Values="$InstanceID" --region $Region --output=json --profile $profile 2>&1)
+		InstanceNameTag=$(aws ec2 describe-tags --filters Name=key,Values=Name Name=resource-id,Values="$InstanceID" --region $Region --output=json 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$InstanceNameTag"
 		fi
@@ -219,13 +226,13 @@ function SetAlarms(){
 		fi
 		ALARMACTION="arn:aws:automate:$Region:ec2:recover"
 		if [[ $DEBUGMODE = "1" ]]; then
-			echo aws cloudwatch put-metric-alarm --alarm-name "$InstanceName - Status Check Failed - $InstanceID" --metric-name StatusCheckFailed --namespace AWS/EC2 --statistic Maximum --dimensions Name=InstanceId,Value="$InstanceID" --unit Count --period 300 --evaluation-periods 1 --threshold 1 --comparison-operator GreaterThanOrEqualToThreshold --alarm-actions \'"$ALARMACTION"\' --output=json --profile $profile --region $Region 2>&1
+			echo aws cloudwatch put-metric-alarm --alarm-name "$InstanceName - Status Check Failed - $InstanceID" --metric-name StatusCheckFailed --namespace AWS/EC2 --statistic Maximum --dimensions Name=InstanceId,Value="$InstanceID" --unit Count --period 300 --evaluation-periods 1 --threshold 1 --comparison-operator GreaterThanOrEqualToThreshold --alarm-actions \'"$ALARMACTION"\' --output=json --region $Region 2>&1
 		fi
-		SetAlarm=$(aws cloudwatch put-metric-alarm --alarm-name "$InstanceName - Status Check Failed - $InstanceID" --metric-name StatusCheckFailed --namespace AWS/EC2 --statistic Maximum --dimensions Name=InstanceId,Value="$InstanceID" --unit Count --period 300 --evaluation-periods 1 --threshold 1 --comparison-operator GreaterThanOrEqualToThreshold --alarm-actions "$ALARMACTION" --output=json --profile $profile --region $Region 2>&1)
+		SetAlarm=$(aws cloudwatch put-metric-alarm --alarm-name "$InstanceName - Status Check Failed - $InstanceID" --metric-name StatusCheckFailed --namespace AWS/EC2 --statistic Maximum --dimensions Name=InstanceId,Value="$InstanceID" --unit Count --period 300 --evaluation-periods 1 --threshold 1 --comparison-operator GreaterThanOrEqualToThreshold --alarm-actions "$ALARMACTION" --output=json --region $Region 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$SetAlarm"
 		fi
-		VerifyAlarm=$(aws cloudwatch describe-alarms --alarm-names "$InstanceName - Status Check Failed - $InstanceID" --output=json --profile $profile --region $Region 2>&1)
+		VerifyAlarm=$(aws cloudwatch describe-alarms --alarm-names "$InstanceName - Status Check Failed - $InstanceID" --output=json --region $Region 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$VerifyAlarm"
 		fi

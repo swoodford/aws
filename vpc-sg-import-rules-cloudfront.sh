@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # Create VPC Security Group with CloudFront IP ranges
 
 # Get current list of CloudFront IP ranges
@@ -84,7 +91,7 @@ function validateVPCID(){
 	fi
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
-		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		DESCRIBEVPCS=$(aws ec2 describe-vpcs 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$DESCRIBEVPCS"
 		fi
@@ -119,7 +126,7 @@ function validateVPCID(){
 			HorizontalRule
 			# Get VPC Names
 			for vpcid in $FOUNDVPCS; do
-				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" --profile $profile 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
 			done
 			echo
 			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
@@ -129,7 +136,7 @@ function validateVPCID(){
 		fi
 	fi
 
-	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$CHECKVPC"
 	fi
@@ -154,7 +161,7 @@ function checkExisting(){
 		echo "GROUPNAMETITLE: $GROUPNAMETITLE"
 	fi
 
-	DESCRIBEGROUPS=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json --profile $profile 2>&1)
+	DESCRIBEGROUPS=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$VPCID" --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$DESCRIBEGROUPS"
 	fi
@@ -200,7 +207,7 @@ function deleteExisting(){
 		HorizontalRule
 		echo "Deleting Security Group ID: $GROUPID"
 		HorizontalRule
-		DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" --profile $profile 2>&1)
+		DELETEGROUP=$(aws ec2 delete-security-group --group-id "$GROUPID" 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$GROUPID"
 		fi
@@ -219,14 +226,14 @@ function createGroup(){
 	echo
 	HorizontalRule
 	echo "Creating Security Group "$GROUPNAME
-	GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id "$VPCID" --profile $profile 2>&1)
+	GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id "$VPCID" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$GROUPID"
 	else
 		GROUPID=$(echo "$GROUPID" | jq '.GroupId' | cut -d \" -f2)
 	fi
 	echo "ID: $GROUPID"
-	TAGS=$(aws ec2 create-tags --resources "$GROUPID" --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
+	TAGS=$(aws ec2 create-tags --resources "$GROUPID" --tags Key=Name,Value="$GROUPNAME" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$TAGS"
 	fi
@@ -243,7 +250,7 @@ function addRules(){
 	echo
 	for ip in $IPLIST
 	do
-		RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --protocol $PROTO --port $PORT --cidr "$ip" --profile $profile 2>&1)
+		RESULT=$(aws ec2 authorize-security-group-ingress --group-id "$GROUPID" --protocol $PROTO --port $PORT --cidr "$ip" 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$RESULT"
 		fi

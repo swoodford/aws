@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will set CloudWatch UnhealthyHost Alarms for all ELBs in all regions available
 # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/UsingAlarmActions.html#AddingRecoverActions
 
@@ -88,7 +95,7 @@ function GetRegions(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin GetRegions Function"
 	fi
-	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
+	AWSregions=$(aws ec2 describe-regions --output=json 2>&1)
 	if echo "$AWSregions" | egrep -iq "error|not"; then
 		fail "$AWSregions"
 	else
@@ -129,7 +136,7 @@ function ListELBs(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin ListELBs Function"
 	fi
-	ELBs=$(aws elb describe-load-balancers --region $Region --output=json --profile $profile 2>&1)
+	ELBs=$(aws elb describe-load-balancers --region $Region --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$ELBs"
 	else
@@ -154,7 +161,7 @@ function ListALBs(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin ListALBs Function"
 	fi
-	ALBs=$(aws elbv2 describe-load-balancers --region $Region --output=json --profile $profile 2>&1)
+	ALBs=$(aws elbv2 describe-load-balancers --region $Region --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$ALBs"
 	else
@@ -175,7 +182,7 @@ function ListALBs(){
 }
 
 function ListSNSTopics(){
-	SNSTopics=$(aws sns list-topics --region $Region --profile $profile 2>&1)
+	SNSTopics=$(aws sns list-topics --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$SNSTopics"
 	fi
@@ -230,13 +237,13 @@ function SetAlarms(){
 			echo "Setting CloudWatch Alarm"
 			if [[ $DEBUGMODE = "1" ]]; then
 				echo "$ALARMACTION"
-				echo aws cloudwatch put-metric-alarm --alarm-name "$ELBName - ELB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ELBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions \'"$ALARMACTION"\' --output=json --profile $profile --region $Region 2>&1
+				echo aws cloudwatch put-metric-alarm --alarm-name "$ELBName - ELB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ELBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions \'"$ALARMACTION"\' --output=json --region $Region 2>&1
 			fi
-			SetAlarm=$(aws cloudwatch put-metric-alarm --alarm-name "$ELBName - ELB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ELBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions "$ALARMACTION" --output=json --profile $profile --region $Region 2>&1)
+			SetAlarm=$(aws cloudwatch put-metric-alarm --alarm-name "$ELBName - ELB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ELBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions "$ALARMACTION" --output=json --region $Region 2>&1)
 			if [ ! $? -eq 0 ]; then
 				fail "$SetAlarm"
 			fi
-			VerifyAlarm=$(aws cloudwatch describe-alarms --alarm-names "$ELBName - ELB Unhealthy Hosts" --output=json --profile $profile --region $Region 2>&1)
+			VerifyAlarm=$(aws cloudwatch describe-alarms --alarm-names "$ELBName - ELB Unhealthy Hosts" --output=json --region $Region 2>&1)
 			if [ ! $? -eq 0 ]; then
 				fail "$VerifyAlarm"
 			fi
@@ -263,13 +270,13 @@ function SetAlarms(){
 			echo "Setting CloudWatch Alarm"
 			if [[ $DEBUGMODE = "1" ]]; then
 				echo "$ALARMACTION"
-				echo aws cloudwatch put-metric-alarm --alarm-name "$ALBName - ALB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ApplicationELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ALBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions \'"$ALARMACTION"\' --output=json --profile $profile --region $Region 2>&1
+				echo aws cloudwatch put-metric-alarm --alarm-name "$ALBName - ALB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ApplicationELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ALBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions \'"$ALARMACTION"\' --output=json --region $Region 2>&1
 			fi
-			SetAlarm=$(aws cloudwatch put-metric-alarm --alarm-name "$ALBName - ALB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ApplicationELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ALBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions "$ALARMACTION" --output=json --profile $profile --region $Region 2>&1)
+			SetAlarm=$(aws cloudwatch put-metric-alarm --alarm-name "$ALBName - ALB Unhealthy Hosts" --metric-name UnHealthyHostCount --namespace AWS/ApplicationELB --statistic Maximum --dimensions Name=LoadBalancerName,Value="$ALBName" --unit Count --period 300 --evaluation-periods 1 --threshold 0 --comparison-operator GreaterThanThreshold --alarm-actions "$ALARMACTION" --output=json --region $Region 2>&1)
 			if [ ! $? -eq 0 ]; then
 				fail "$SetAlarm"
 			fi
-			VerifyAlarm=$(aws cloudwatch describe-alarms --alarm-names "$ALBName - ALB Unhealthy Hosts" --output=json --profile $profile --region $Region 2>&1)
+			VerifyAlarm=$(aws cloudwatch describe-alarms --alarm-names "$ALBName - ALB Unhealthy Hosts" --output=json --region $Region 2>&1)
 			if [ ! $? -eq 0 ]; then
 				fail "$VerifyAlarm"
 			fi

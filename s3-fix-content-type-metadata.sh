@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # Safely fix invalid content-type metadata on AWS S3 bucket website assets for some common filetypes
 # Inclues CSS, JS, JSON, JPG, JPEG, GIF, PNG, SVG, PDF, XML
 
@@ -78,7 +85,7 @@ if [ "$BUCKET" = "YOUR-S3-BUCKET-NAME" ]; then
 fi
 
 # Determine the bucket region
-REGION=$(aws s3api get-bucket-location --bucket $BUCKET --output text --profile $profile 2>&1)
+REGION=$(aws s3api get-bucket-location --bucket $BUCKET --output text 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$REGION"
 fi
@@ -87,7 +94,7 @@ if echo $REGION | grep -q "None"; then
 fi
 
 message CSS
-css=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.css" --content-type "text/css" --metadata-directive "REPLACE" 2>&1)
+css=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.css" --content-type "text/css" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$css"
 fi
@@ -98,7 +105,7 @@ else
 fi
 
 message JS
-js=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.js" --content-type "application/javascript" --metadata-directive "REPLACE" 2>&1)
+js=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.js" --content-type "application/javascript" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$js"
 fi
@@ -109,7 +116,7 @@ else
 fi
 
 message JSON
-json=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.json" --content-type "application/json" --metadata-directive "REPLACE" 2>&1)
+json=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.json" --content-type "application/json" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$json"
 fi
@@ -120,7 +127,7 @@ else
 fi
 
 message JPG
-jpg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
+jpg=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$jpg"
 fi
@@ -130,7 +137,7 @@ else
 	echo "$jpg"
 fi
 message JPEG
-jpeg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpeg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
+jpeg=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.jpeg" --content-type "image/jpeg" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$jpeg"
 fi
@@ -141,7 +148,7 @@ else
 fi
 
 message GIF
-gif=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.gif" --content-type "image/gif" --metadata-directive "REPLACE" 2>&1)
+gif=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.gif" --content-type "image/gif" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$gif"
 fi
@@ -152,7 +159,7 @@ else
 fi
 
 message PNG
-png=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.png" --content-type "image/png" --metadata-directive "REPLACE" 2>&1)
+png=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.png" --content-type "image/png" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$png"
 fi
@@ -163,7 +170,7 @@ else
 fi
 
 message SVG
-svg=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.svg" --content-type "image/svg+xml" --metadata-directive "REPLACE" 2>&1)
+svg=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.svg" --content-type "image/svg+xml" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$svg"
 fi
@@ -174,7 +181,7 @@ else
 fi
 
 message PDF
-pdf=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.pdf" --content-type "application/pdf" --metadata-directive "REPLACE" 2>&1)
+pdf=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.pdf" --content-type "application/pdf" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$pdf"
 fi
@@ -185,7 +192,7 @@ else
 fi
 
 message XML
-xml=$(aws s3 cp --recursive --profile $profile --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.xml" --content-type "text/xml" --metadata-directive "REPLACE" 2>&1)
+xml=$(aws s3 cp --recursive --region $REGION s3://$BUCKET/ s3://$BUCKET/ --exclude "*" --include "*.xml" --content-type "text/xml" --metadata-directive "REPLACE" 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$xml"
 fi

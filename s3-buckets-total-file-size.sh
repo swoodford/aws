@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
 # Script to count total size of all data stored in a single or in all S3 buckets
 # Requires aws s3api, jq, IAM account must have permission to access all buckets
 
@@ -96,13 +103,13 @@ function SingleBucket(){
   read -r -p "Bucket name: s3://" CURRENTBUCKET
   echo
   echo "Calculating size..."
-  CURRENTBUCKETREGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text --profile $profile 2>&1)
+  CURRENTBUCKETREGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text 2>&1)
   if echo $CURRENTBUCKETREGION | grep -q None; then
     REGION="us-east-1"
   else
     REGION=$CURRENTBUCKETREGION
   fi
-  CURRENTBUCKETSIZE=$(aws s3api list-objects --bucket $CURRENTBUCKET --region $REGION --output json --query "[sum(Contents[].Size)]" --profile $profile 2>&1)
+  CURRENTBUCKETSIZE=$(aws s3api list-objects --bucket $CURRENTBUCKET --region $REGION --output json --query "[sum(Contents[].Size)]" 2>&1)
   if echo $CURRENTBUCKETSIZE | grep -q invalid; then
     CURRENTBUCKETSIZE="0"
   else
@@ -116,7 +123,7 @@ function SingleBucket(){
 
 function AllBuckets(){
   # List buckets
-  LS=$(aws s3 ls --profile $profile 2>&1)
+  LS=$(aws s3 ls 2>&1)
 
   # Count number of buckets
   TOTALNUMBERS3BUCKETS=$(echo "$LS" | wc -l | rev | cut -d " " -f1 | rev)
@@ -140,13 +147,13 @@ function AllBuckets(){
     HorizontalRule
     echo \#$COUNT $CURRENTBUCKET
 
-    CURRENTBUCKETREGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text --profile $profile 2>&1)
+    CURRENTBUCKETREGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text 2>&1)
     if echo $CURRENTBUCKETREGION | grep -q None; then
       REGION="us-east-1"
     else
       REGION=$CURRENTBUCKETREGION
     fi
-    CURRENTBUCKETSIZE=$(aws s3api list-objects --bucket $CURRENTBUCKET --region $REGION --output json --query "[sum(Contents[].Size)]" --profile $profile 2>&1)
+    CURRENTBUCKETSIZE=$(aws s3api list-objects --bucket $CURRENTBUCKET --region $REGION --output json --query "[sum(Contents[].Size)]" 2>&1)
     if echo $CURRENTBUCKETSIZE | grep -q invalid; then
       CURRENTBUCKETSIZE="0"
     else

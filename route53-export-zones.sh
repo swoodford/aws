@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
 # This script will use cli53 to export the zone file for each Hosted Zone domain in Route 53 for git version control
 # Requires Python, pip, awscli, cli53
 # For more info on cli53 see https://github.com/barnybug/cli53
@@ -89,7 +96,7 @@ check_command "cli53"
 # fi
 
 # Get list of Hosted Zones in Route 53
-DOMAINLIST=$(aws route53 list-hosted-zones --output text --profile $profile | cut -f 4 | rev | cut -c 2- | rev | grep -v '^$')
+DOMAINLIST=$(aws route53 list-hosted-zones --output text | cut -f 4 | rev | cut -c 2- | rev | grep -v '^$')
 
 if [ -z "$DOMAINLIST" ]; then
 	fail "No hosted zones found in Route 53!"
@@ -118,7 +125,7 @@ do
 	HorizontalRule
 	echo \#$COUNT
 	DOMAIN_ID=$(echo "$DOMAINLIST" | nl | grep -w $COUNT | cut -f 2)
-	cli53 export --full --profile $profile $DOMAIN_ID > route53zones/$profile/$DOMAIN_ID.zone
+	cli53 export --full $DOMAIN_ID > route53zones/$profile/$DOMAIN_ID.zone
 	echo "Exported: "$DOMAIN_ID
 done
 

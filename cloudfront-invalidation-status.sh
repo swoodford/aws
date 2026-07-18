@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script monitors CloudFront distributions for cache invalidation status and alerts when it has completed
 # Requires the AWS CLI and jq
 
@@ -57,7 +64,7 @@ fi
 
 # Check for Distributions
 function distributionsCheck(){
-	distributions=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | .ARN')
+	distributions=$(aws cloudfront list-distributions 2>&1 | jq '.DistributionList | .Items | .[] | .ARN')
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "$distributions"
 	fi
@@ -69,8 +76,8 @@ function distributionsCheck(){
 
 # List Distributions
 function listDistributions(){
-	distributions=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | .Id' | cut -d \" -f2)
-	names=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | .Origins | .Items | .[] | .Id' | cut -d \" -f2)
+	distributions=$(aws cloudfront list-distributions 2>&1 | jq '.DistributionList | .Items | .[] | .Id' | cut -d \" -f2)
+	names=$(aws cloudfront list-distributions 2>&1 | jq '.DistributionList | .Items | .[] | .Origins | .Items | .[] | .Id' | cut -d \" -f2)
 
 	if [ -z "$distributions" ]; then
 		echo "$distributions"
@@ -109,7 +116,7 @@ function listInvalidations(){
 		if [[ $DEBUGMODE = "1" ]]; then
 			echo "Debug distribution ID: $distributionid"
 		fi
-		invalidations=$(aws cloudfront list-invalidations --distribution-id $distributionid --profile $profile 2>&1 | jq '.InvalidationList | .Items | .[] | select(.Status != "Completed") | .Id' | cut -d \" -f2)
+		invalidations=$(aws cloudfront list-invalidations --distribution-id $distributionid 2>&1 | jq '.InvalidationList | .Items | .[] | select(.Status != "Completed") | .Id' | cut -d \" -f2)
 		if [[ $DEBUGMODE = "1" ]]; then
 			echo invalidations "$invalidations"
 		fi
@@ -134,7 +141,7 @@ function checkInvalidationstatus(){
 		while IFS= read -r invalidationid
 		do
 			echo Invalidation ID: $invalidationid
-			invalidationStatus=$(aws cloudfront get-invalidation --distribution-id $distributionid --id $invalidationid --profile $profile 2>&1 | jq '.Invalidation | .Status' | cut -d \" -f2)
+			invalidationStatus=$(aws cloudfront get-invalidation --distribution-id $distributionid --id $invalidationid 2>&1 | jq '.Invalidation | .Status' | cut -d \" -f2)
 
 			while [ $invalidationStatus = "InProgress" ]; do
 				HorizontalRule

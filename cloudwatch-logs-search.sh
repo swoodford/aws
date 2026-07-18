@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will search all CloudWatch Logs (all log groups in all regions available) for a filter string
 # Requires the AWS CLI and jq
 
@@ -102,7 +109,7 @@ function GetRegions(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin GetRegions Function"
 	fi
-	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
+	AWSregions=$(aws ec2 describe-regions --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$AWSregions"
 	else
@@ -144,7 +151,7 @@ function ListLogGroups(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin ListLogGroups Function"
 	fi
-	ListLogGroups=$(aws logs describe-log-groups --region=$Region --output=json --profile $profile 2>&1)
+	ListLogGroups=$(aws logs describe-log-groups --region=$Region --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$ListLogGroups"
 	else
@@ -191,7 +198,7 @@ function FilterLogEvents(){
 			if [[ $DEBUGMODE = "1" ]]; then
 				echo "Searching Single Log Group: $LogGroupName"
 			fi
-			FilterLogEvents=$(aws logs filter-log-events --region $Region --log-group-name "$LogGroupName" --filter-pattern \""$FilterPattern"\" --output=json --profile $profile 2>&1)
+			FilterLogEvents=$(aws logs filter-log-events --region $Region --log-group-name "$LogGroupName" --filter-pattern \""$FilterPattern"\" --output=json 2>&1)
 			if [ ! $? -eq 0 ]; then
 				fail "$FilterLogEvents"
 			fi
@@ -219,7 +226,7 @@ function FilterLogEvents(){
 				echo "LogGroup: $LogGroup"
 				pause
 			fi
-			FilterLogEvents=$(aws logs filter-log-events --region $Region --log-group-name "$LogGroup" --filter-pattern \""$FilterPattern"\" --output=json --profile $profile 2>&1)
+			FilterLogEvents=$(aws logs filter-log-events --region $Region --log-group-name "$LogGroup" --filter-pattern \""$FilterPattern"\" --output=json 2>&1)
 			if [ ! $? -eq 0 ]; then
 				fail "$FilterLogEvents"
 			fi

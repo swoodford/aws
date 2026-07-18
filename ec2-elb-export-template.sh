@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will export an AWS ELB to a JSON Template File for version control
 # The ELB can then be duplicated or renamed or recreated from the JSON Template File
 # An AWS CLI profile can be passed into the script as an argument
@@ -118,7 +125,7 @@ if [ "$CreateTemplateFile" = "true" ]; then
 
 
 
-	DescribeLB=$(aws elb describe-load-balancers --load-balancer-names $ELBname --profile $profile 2>&1)
+	DescribeLB=$(aws elb describe-load-balancers --load-balancer-names $ELBname 2>&1)
 	if echo $DescribeLB | grep -q "could not be found"; then
 		fail "$DescribeLB"
 	fi
@@ -133,7 +140,7 @@ if [ "$CreateTemplateFile" = "true" ]; then
 		echo "$DescribeLB" > "$TemplateFileName"1
 	fi
 
-	DescribeAttributes=$(aws elb describe-load-balancer-attributes --load-balancer-name $ELBname --profile $profile 2>&1)
+	DescribeAttributes=$(aws elb describe-load-balancer-attributes --load-balancer-name $ELBname 2>&1)
 	if echo $DescribeAttributes | grep -q "error"; then
 		fail "$DescribeAttributes"
 	else
@@ -161,7 +168,7 @@ if [ "$CreateNewELB" = "true" ]; then
 	fi
 
 	# Check for an existing ELB with the same name as the new ELB
-	TestNewELB=$(aws elb describe-load-balancers --load-balancer-names $NewELBname --profile $profile 2>&1)
+	TestNewELB=$(aws elb describe-load-balancers --load-balancer-names $NewELBname 2>&1)
 	if echo "$TestNewELB" | grep -q "An error occurred"; then
 		echo
 	else
@@ -375,7 +382,7 @@ if [ "$CreateNewELB" = "true" ]; then
 	fi
 
 	# Create new ELB from JSON
-	CreateLoadBalancer=$(aws elb create-load-balancer --cli-input-json "$json" --profile $profile 2>&1)
+	CreateLoadBalancer=$(aws elb create-load-balancer --cli-input-json "$json" 2>&1)
 	if ! echo "$CreateLoadBalancer" | grep -qw "DNSName"; then
 		fail "$CreateLoadBalancer"
 	else
@@ -400,7 +407,7 @@ if [ "$CreateNewELB" = "true" ]; then
 		# json1=$(cat output1.json)
 
 		# Register Instances with ELB
-		RegisterInstances=$(aws elb register-instances-with-load-balancer --cli-input-json "$json1" --profile $profile 2>&1)
+		RegisterInstances=$(aws elb register-instances-with-load-balancer --cli-input-json "$json1" 2>&1)
 		if ! echo "$RegisterInstances" | grep -qw "Instances"; then
 			fail "$RegisterInstances"
 		else
@@ -447,7 +454,7 @@ if [ "$CreateNewELB" = "true" ]; then
 
 
 		# Configure Healthcheck from JSON
-		ConfigureHealthCheck=$(aws elb configure-health-check --cli-input-json "$json2" --profile $profile 2>&1)
+		ConfigureHealthCheck=$(aws elb configure-health-check --cli-input-json "$json2" 2>&1)
 		if ! echo "$ConfigureHealthCheck" | grep -qw "HealthCheck"; then
 			fail "$ConfigureHealthCheck"
 		else
@@ -502,7 +509,7 @@ if [ "$CreateNewELB" = "true" ]; then
 
 
 		# Configure Attributes from JSON
-		ConfigureAttributes=$(aws elb modify-load-balancer-attributes --cli-input-json "$json3" --profile $profile 2>&1)
+		ConfigureAttributes=$(aws elb modify-load-balancer-attributes --cli-input-json "$json3" 2>&1)
 		if ! echo "$ConfigureAttributes" | grep -qw "LoadBalancerAttributes"; then
 			fail "$ConfigureAttributes"
 		else

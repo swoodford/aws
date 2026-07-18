@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will quickly delete all CloudWatch Log Groups with a specified prefix in all regions available
 # Requires the AWS CLI and jq
 
@@ -115,7 +122,7 @@ function GetRegions(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin GetRegions Function"
 	fi
-	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
+	AWSregions=$(aws ec2 describe-regions --output=json 2>&1)
 	if echo "$AWSregions" | egrep -iq "error|not"; then
 		fail "$AWSregions"
 	else
@@ -155,7 +162,7 @@ function ListLogGroups(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin ListLogGroups Function"
 	fi
-	ListLogGroups=$(aws logs describe-log-groups --log-group-name-prefix "$Prefix" --region=$Region --output=json --profile $profile 2>&1)
+	ListLogGroups=$(aws logs describe-log-groups --log-group-name-prefix "$Prefix" --region=$Region --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$ListLogGroups"
 	# if echo "$ListLogGroups" | egrep -iq "error|not"; then
@@ -201,7 +208,7 @@ function DeleteLogGroup(){
 			pause
 		fi
 		echo "Deleting Log Group: $LogGroup"
-		DeleteLogGroup=$(aws logs delete-log-group --region $Region --log-group-name $LogGroup --output=json --profile $profile 2>&1)
+		DeleteLogGroup=$(aws logs delete-log-group --region $Region --log-group-name $LogGroup --output=json 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$DeleteLogGroup"
 		fi

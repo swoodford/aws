@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will export each AWS WAF IP set match condition to a JSON file for backup
 # Requires the AWS CLI and jq
 
@@ -63,7 +70,7 @@ fi
 
 # Get list of all IP Sets
 function ListIPSets(){
-	ListIPSets=$(aws waf list-ip-sets --output=json --profile $profile 2>&1)
+	ListIPSets=$(aws waf list-ip-sets --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$ListIPSets"
 	fi
@@ -103,7 +110,7 @@ function ListIPSets(){
 
 # Get a single IP Set
 function GetIPSet(){
-	GetIPSet=$(aws waf get-ip-set --ip-set-id "$IPSETID" --output=json --profile $profile 2>&1)
+	GetIPSet=$(aws waf get-ip-set --ip-set-id "$IPSETID" --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$GetIPSet"
 	fi

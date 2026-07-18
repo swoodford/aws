@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
 # Script to export S3 bucket ACL, CORS, Policy and Website JSON for auditing security of all buckets
 # Each S3 bucket will have a JSON file generated in the subfolder specified
 # Requires aws s3api, jq, (AWS CLI profile must have IAM permission to access all buckets)
@@ -59,7 +66,7 @@ else
 fi
 
 # List buckets
-LS=$(aws s3 ls --profile $profile 2>&1)
+LS=$(aws s3 ls 2>&1)
 
 if echo "$LS" | egrep -q "Error|error|not"; then
   fail "$LS"
@@ -113,7 +120,7 @@ do
   fi
 
   # Determine the bucket region
-  CURRENTBUCKETREGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text --profile $profile 2>&1)
+  CURRENTBUCKETREGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text 2>&1)
   if echo $CURRENTBUCKETREGION | grep -q "None"; then
     REGION="us-east-1"
   else
@@ -121,8 +128,8 @@ do
   fi
 
   # Lookup the access control policy
-  ACL=$(aws s3api get-bucket-acl --bucket $CURRENTBUCKET --region $REGION --profile $profile 2>&1)
-  # ACL=$(aws s3api get-bucket-acl --bucket $CURRENTBUCKET --profile $profile 2>&1 | sed 's/\,/;/g')
+  ACL=$(aws s3api get-bucket-acl --bucket $CURRENTBUCKET --region $REGION 2>&1)
+  # ACL=$(aws s3api get-bucket-acl --bucket $CURRENTBUCKET 2>&1 | sed 's/\,/;/g')
 
   if echo "$ACL" | grep -q "error"; then
     ACL='{
@@ -132,8 +139,8 @@ do
   fi
 
   # Lookup the CORS policy
-  CORS=$(aws s3api get-bucket-cors --bucket $CURRENTBUCKET --region $REGION --profile $profile 2>&1)
-  # CORS=$(aws s3api get-bucket-cors --bucket $CURRENTBUCKET --profile $profile 2>&1 | sed 's/\,/;/g')
+  CORS=$(aws s3api get-bucket-cors --bucket $CURRENTBUCKET --region $REGION 2>&1)
+  # CORS=$(aws s3api get-bucket-cors --bucket $CURRENTBUCKET 2>&1 | sed 's/\,/;/g')
 
   if echo "$CORS" | grep -q "error"; then
     CORS='{
@@ -143,7 +150,7 @@ do
   fi
 
   # Lookup the bucket policy
-  POLICY=$(aws s3api get-bucket-policy --bucket $CURRENTBUCKET --region $REGION --profile $profile --output text 2>&1)
+  POLICY=$(aws s3api get-bucket-policy --bucket $CURRENTBUCKET --region $REGION --output text 2>&1)
 
   if echo "$POLICY" | grep -q "error"; then
     POLICY='{
@@ -156,7 +163,7 @@ do
   fi
 
   # Lookup the website hosting policy
-  WEBSITE=$(aws s3api get-bucket-website --bucket $CURRENTBUCKET --region $REGION --profile $profile 2>&1)
+  WEBSITE=$(aws s3api get-bucket-website --bucket $CURRENTBUCKET --region $REGION 2>&1)
 
   if echo "$WEBSITE" | grep -q "error"; then
     WEBSITE='{
