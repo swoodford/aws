@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script monitors CloudFront distributions for In-Progress Status and alerts when it has completed and is Deployed
 # Requires the AWS CLI and jq
 
@@ -57,7 +64,7 @@ fi
 
 # Check for Distributions
 function distributionsCheck(){
-	distributions=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | .ARN')
+	distributions=$(aws cloudfront list-distributions 2>&1 | jq '.DistributionList | .Items | .[] | .ARN')
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "$distributions"
 	fi
@@ -74,8 +81,8 @@ function listInProgress(){
 	echo "Checking for In-Progress Status..."
 	HorizontalRule
 
-	inprogress=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | select(.Status == "InProgress") | .Id' | cut -d \" -f2)
-	name=$(aws cloudfront list-distributions --profile $profile 2>&1 | jq '.DistributionList | .Items | .[] | select(.Status == "InProgress") | .Origins | .Items | .[] | .Id' | cut -d \" -f2)
+	inprogress=$(aws cloudfront list-distributions 2>&1 | jq '.DistributionList | .Items | .[] | select(.Status == "InProgress") | .Id' | cut -d \" -f2)
+	name=$(aws cloudfront list-distributions 2>&1 | jq '.DistributionList | .Items | .[] | select(.Status == "InProgress") | .Origins | .Items | .[] | .Id' | cut -d \" -f2)
 
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo inprogress "$inprogress"
@@ -96,7 +103,7 @@ function checkStatus(){
 		HorizontalRule
 		return 1
 	else
-		status=$(aws cloudfront get-distribution --id $inprogress --profile $profile 2>&1 | jq '.Distribution | .Status' | cut -d \" -f2)
+		status=$(aws cloudfront get-distribution --id $inprogress 2>&1 | jq '.Distribution | .Status' | cut -d \" -f2)
 
 		while [ $status = "InProgress" ]; do
 			HorizontalRule

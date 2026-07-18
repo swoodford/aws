@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
 # This script will upload an SSL Certificate to AWS for use in setting up an ELB
 # Requires AWS CLI Setup and jq
 
@@ -73,7 +80,7 @@ function import(){
 	if [ -z "$profile" ]; then
 		IMPORT=$(aws iam upload-server-certificate --server-certificate-name "$DOMAIN" --certificate-body "$PUBKEY" --private-key "$PRIVATE" --certificate-chain "$CHAIN" 2>&1)
 	else
-		IMPORT=$(aws iam upload-server-certificate --profile $profile --server-certificate-name "$DOMAIN" --certificate-body "$PUBKEY" --private-key "$PRIVATE" --certificate-chain "$CHAIN" 2>&1)
+		IMPORT=$(aws iam upload-server-certificate --server-certificate-name "$DOMAIN" --certificate-body "$PUBKEY" --private-key "$PRIVATE" --certificate-chain "$CHAIN" 2>&1)
 	fi
 	# aws iam upload-server-certificate --server-certificate-name "$DOMAIN" --certificate-body file://"$PUBKEY" --private-key file://"$PRIVATE" --certificate-chain file://"$CHAIN"
 	# aws iam upload-server-certificate --server-certificate-name $DOMAIN-$EXPDATE --certificate-body file://$PUBKEY --private-key file://$PRIVATE --certificate-chain file://$CHAIN

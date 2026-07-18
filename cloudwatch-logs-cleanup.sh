@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will delete all CloudWatch Log Groups with a Last Event that is older than the Retention Policy in all regions available
 # Requires the AWS CLI and jq
 
@@ -105,7 +112,7 @@ function GetRegions(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin GetRegions Function"
 	fi
-	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
+	AWSregions=$(aws ec2 describe-regions --output=json 2>&1)
 	if echo "$AWSregions" | egrep -iq "error|not"; then
 		fail "$AWSregions"
 	else
@@ -145,7 +152,7 @@ function ListLogGroups(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin ListLogGroups Function"
 	fi
-	ListLogGroups=$(aws logs describe-log-groups --region=$Region --output=json --profile $profile 2>&1)
+	ListLogGroups=$(aws logs describe-log-groups --region=$Region --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$ListLogGroups"
 	# if echo "$ListLogGroups" | egrep -iq "error|not"; then
@@ -187,7 +194,7 @@ function CheckRetentionPolicy(){
 			echo "o0o0o0o"
 			pause
 		fi
-		CheckRetentionPolicy=$(aws logs describe-log-groups --region $Region --log-group-name-prefix $LogGroup --output=json --profile $profile 2>&1)
+		CheckRetentionPolicy=$(aws logs describe-log-groups --region $Region --log-group-name-prefix $LogGroup --output=json 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$CheckRetentionPolicy"
 		fi
@@ -223,7 +230,7 @@ function CheckLogStream(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin CheckLogStream Function"
 	fi
-	CheckLogStream=$(aws logs describe-log-streams --region $Region --log-group-name $LogGroup --max-items 1 --order-by LastEventTime --descending --output=json --profile $profile 2>&1)
+	CheckLogStream=$(aws logs describe-log-streams --region $Region --log-group-name $LogGroup --max-items 1 --order-by LastEventTime --descending --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$CheckLogStream"
 	fi
@@ -313,7 +320,7 @@ function CheckTimestamp(){
 # Delete Log Group
 function DeleteLogGroup(){
 	echo "Deleting Log Group..."
-	DeleteLogGroup=$(aws logs delete-log-group --region $Region --log-group-name $LogGroup --output=json --profile $profile 2>&1)
+	DeleteLogGroup=$(aws logs delete-log-group --region $Region --log-group-name $LogGroup --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$DeleteLogGroup"
 	fi

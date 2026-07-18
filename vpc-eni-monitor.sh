@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will generate an HTML page to monitor the number of AWS VPC Elastic Network Interfaces currently in use and upload it to an S3 bucket website
 # Requires the AWS CLI, jq
 
@@ -46,7 +53,7 @@ fi
 function validateVPCID(){
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
-		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $PROFILE1 2>&1)
+		DESCRIBEVPCS=$(aws ec2 describe-vpcs1 2>&1)
 		if echo $DESCRIBEVPCS | egrep -q "Error|error|not"; then
 			fail "$DESCRIBEVPCS"
 		fi
@@ -59,7 +66,7 @@ function validateVPCID(){
 		if [ "$NUMVPCS" -eq "1" ]; then
 			VPCID=$(echo "$DESCRIBEVPCS" | jq '.Vpcs | .[] | .VpcId' | cut -d \" -f2)
 		else
-			FOUNDVPCS=$(aws ec2 describe-vpcs --profile $PROFILE1 2>&1 | jq '.Vpcs | .[] | .VpcId')
+			FOUNDVPCS=$(aws ec2 describe-vpcs1 2>&1 | jq '.Vpcs | .[] | .VpcId')
 			if echo $FOUNDVPCS | egrep -q "Error|error|not|invalid"; then
 				fail "$FOUNDVPCS"
 			fi
@@ -71,7 +78,7 @@ function validateVPCID(){
 			fi
 		fi
 	fi
-	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $PROFILE1 2>&1)
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID"1 2>&1)
 
 	# Test for error
 	if ! echo "$CHECKVPC" | grep -q "available"; then
@@ -87,7 +94,7 @@ function validateVPCID(){
 function generateHTML(){
 	while :
 	do
-		ENI=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$VPCID --profile $PROFILE1 2>&1 | jq '.NetworkInterfaces | .[] | .NetworkInterfaceId' | wc -l | rev | cut -d ' ' -f1 | rev)
+		ENI=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$VPCID1 2>&1 | jq '.NetworkInterfaces | .[] | .NetworkInterfaceId' | wc -l | rev | cut -d ' ' -f1 | rev)
 		if echo $ENI | grep -q error; then
 			fail "$ENI"
 		fi
@@ -157,7 +164,7 @@ EOP
 EOP
 		) >> $HTMLFILENAME
 
-		UPLOAD=$(aws s3 cp $HTMLFILENAME $S3BUCKETPATH --profile $PROFILE2 2>&1)
+		UPLOAD=$(aws s3 cp $HTMLFILENAME $S3BUCKETPATH2 2>&1)
 		if echo $UPLOAD | egrep -q "Error|error|not"; then
 			fail "$UPLOAD"
 		fi

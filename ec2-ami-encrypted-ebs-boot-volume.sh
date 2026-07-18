@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will create an AMI with an encrypted boot volume from the latest Amazon Linux AMI (amzn-ami-hvm-x86_64-gp2)
 
 # See:
@@ -97,7 +104,7 @@ function ClientToken(){
 # Determine region
 function GetRegion(){
 	if [ "$Region" == "default" ]; then
-		Region=$(aws configure get region --profile $profile 2>&1)
+		Region=$(aws configure get region 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$Region"
 		fi
@@ -109,7 +116,7 @@ function GetRegion(){
 
 # Get the latest Amazon Linux AMI ID
 function GetAMI(){
-	AMI=$(aws ssm get-parameters --names /aws/service/ami-amazon-linux-latest/"$AMITYPE" --region $Region --profile $profile 2>&1)
+	AMI=$(aws ssm get-parameters --names /aws/service/ami-amazon-linux-latest/"$AMITYPE" --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$AMI"
 	fi
@@ -130,7 +137,7 @@ function GetAMI(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "AMIID: $AMIID"
 	fi
-	DESCR=$(aws ec2 describe-images --image-ids "$AMIID" --region $Region --profile $profile 2>&1)
+	DESCR=$(aws ec2 describe-images --image-ids "$AMIID" --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$DESCR"
 	fi
@@ -149,7 +156,7 @@ function GetAMI(){
 
 # Build encrypted AMI
 function EncryptAMI(){
-	Encrypt=$(aws ec2 copy-image --encrypted --client-token "$ClientToken" --description "Encrypted $DESCR ($AMIID)" --name "Encrypted $DESCR ($AMIID)" --source-image-id "$AMIID" --source-region $Region --region $Region --profile $profile 2>&1)
+	Encrypt=$(aws ec2 copy-image --encrypted --client-token "$ClientToken" --description "Encrypted $DESCR ($AMIID)" --name "Encrypted $DESCR ($AMIID)" --source-image-id "$AMIID" --source-region $Region --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Encrypt"
 	fi
@@ -175,7 +182,7 @@ function TagAMI(){
 	echo
 	echo
 	echo "Creating Name Tag for AMI ID: $EncryptedAMI"
-	Tag=$(aws ec2 create-tags --resources "$EncryptedAMI" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region --profile $profile 2>&1)
+	Tag=$(aws ec2 create-tags --resources "$EncryptedAMI" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$Tag"
 	fi
@@ -183,7 +190,7 @@ function TagAMI(){
 
 # Tag the Snapshot
 function QuicklyTagSnapshot(){
-	CallerID=$(aws sts get-caller-identity --profile $profile 2>&1)
+	CallerID=$(aws sts get-caller-identity 2>&1)
 	# if [ ! $? -eq 0 ]; then
 	# 	error "$CallerID"
 	# fi
@@ -194,7 +201,7 @@ function QuicklyTagSnapshot(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "AccountID: $AccountID"
 	fi
-	Snapshots=$(aws ec2 describe-snapshots --owner-ids $AccountID --filters Name=status,Values=pending --region $Region --profile $profile 2>&1)
+	Snapshots=$(aws ec2 describe-snapshots --owner-ids $AccountID --filters Name=status,Values=pending --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		error "$Snapshots"
 	fi
@@ -219,7 +226,7 @@ function QuicklyTagSnapshot(){
 		fi
 		echo
 		echo "Creating Name Tag for Snapshot ID: $SnapshotID"
-		SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region --profile $profile 2>&1)
+		SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region 2>&1)
 		if [ ! $? -eq 0 ]; then
 			error "$SnapshotTag"
 		fi
@@ -252,7 +259,7 @@ function SlowlyTagSnapshot(){
 	if [ -z "$SnapshotID" ]; then
 		fail "Unable to get Snapshot ID or Tag Snapshot."
 	fi
-	SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region --profile $profile 2>&1)
+	SnapshotTag=$(aws ec2 create-tags --resources "$SnapshotID" --tags "Key=Name,Value=Encrypted $DESCR ($AMIID)" --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$SnapshotTag"
 	fi
@@ -262,7 +269,7 @@ function SlowlyTagSnapshot(){
 
 # Check AMI State
 function CheckState(){
-	AMIdescr=$(aws ec2 describe-images --image-ids "$EncryptedAMI" --region $Region --profile $profile 2>&1)
+	AMIdescr=$(aws ec2 describe-images --image-ids "$EncryptedAMI" --region $Region 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$AMIdescr"
 	fi

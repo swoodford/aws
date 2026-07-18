@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will read from the list of IPs in the file iplist
 # Then create an AWS VPC Security Group with rules to allow access to each IP at the port specified
 # Due to AWS limits a group can only have 50 rules and will create multiple groups if greater than 50 rules
@@ -76,7 +83,7 @@ function validateVPCID(){
 	fi
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
-		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		DESCRIBEVPCS=$(aws ec2 describe-vpcs 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$DESCRIBEVPCS"
 		fi
@@ -111,7 +118,7 @@ function validateVPCID(){
 			HorizontalRule
 			# Get VPC Names
 			for vpcid in $FOUNDVPCS; do
-				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" --profile $profile 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
 			done
 			echo
 			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
@@ -121,7 +128,7 @@ function validateVPCID(){
 		fi
 	fi
 
-	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$CHECKVPC"
 	fi
@@ -136,7 +143,7 @@ function createGroup(){
 	echo
 	HorizontalRule
 	echo "Creating Security Group "$GROUPNAME
-	creategroup=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID --profile $profile 2>&1)
+	creategroup=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCR" --vpc-id $VPCID 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$creategroup"
 	fi
@@ -145,7 +152,7 @@ function createGroup(){
 		fail "$SGID"
 	fi
 	echo "Security Group ID: $SGID"
-	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" --profile $profile 2>&1)
+	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$GROUPNAME" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$TAG"
 	fi
@@ -154,7 +161,7 @@ function createGroup(){
 }
 
 function addRule(){
-	addrule=$(aws ec2 authorize-security-group-ingress --group-name "$GROUPNAME" --protocol $PROTO --port $PORT --cidr "$iplist/32" --profile $profile 2>&1)
+	addrule=$(aws ec2 authorize-security-group-ingress --group-name "$GROUPNAME" --protocol $PROTO --port $PORT --cidr "$iplist/32" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$addrule"
 	fi

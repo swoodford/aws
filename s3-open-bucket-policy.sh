@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script sets an S3 bucket policy to allow GetObject requests from any IP.
 # Requires the AWS CLI and jq
 
@@ -37,26 +44,39 @@ fi
 # Check for AWS CLI profile argument passed into the script
 # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-multiple-profiles
 scriptname=`basename "$0"`
-if [ $# -eq 0 ]; then
-	echo "Usage: ./$scriptname profile environment"
-	echo "Where profile is the AWS CLI profile name"
-	echo "And environment is the environment name (dev/staging/prod/all)"
-	echo
-	echo "Using default profile and no environment name"
-	echo
-	profile=default
-elif [ $# -eq 1 ]; then
-	echo "Usage: ./$scriptname profile environment"
-	echo "Where profile is the AWS CLI profile name"
-	echo "And environment is the environment name (dev/staging/prod/all)"
-	echo
-	echo "Using profile $1 and no environment name"
-	echo
-	profile=$1
+if [ $# -gt 2 ]; then
+	fail "Invalid arguments. Usage: ./$scriptname [--profile AWS_PROFILE_NAME] [legacy_profile] [environment]"
 elif [ $# -eq 2 ]; then
 	echo "Using profile $1 and environment $2"
 	profile=$1
 	s3bucketenv=$2
+elif [ $# -eq 1 ]; then
+	if [ -n "${AWS_SCRIPT_PROFILE:-}" ] && [ "${AWS_SCRIPT_PROFILE}" != "$1" ]; then
+		profile="${AWS_SCRIPT_PROFILE}"
+		s3bucketenv=$1
+		echo "Using profile ${AWS_SCRIPT_PROFILE} and environment $s3bucketenv"
+	else
+		echo "Usage: ./$scriptname [--profile AWS_PROFILE_NAME] [legacy_profile] [environment]"
+		echo "Where profile is the AWS CLI profile name"
+		echo "And environment is the environment name (dev/staging/prod/all)"
+		echo
+		echo "Using profile $1 and no environment name"
+		echo
+		profile=$1
+	fi
+else
+	echo "Usage: ./$scriptname [--profile AWS_PROFILE_NAME] [legacy_profile] [environment]"
+	echo "Where profile is the AWS CLI profile name"
+	echo "And environment is the environment name (dev/staging/prod/all)"
+	echo
+	if [ -n "${AWS_SCRIPT_PROFILE:-}" ]; then
+		echo "Using profile ${AWS_SCRIPT_PROFILE} and no environment name"
+		profile="${AWS_SCRIPT_PROFILE}"
+	else
+		echo "Using default profile and no environment name"
+		profile=default
+	fi
+	echo
 fi
 
 # Check required commands
@@ -80,7 +100,7 @@ function JSONizePolicy {
 
 # Set the S3 bucket policy
 function setS3Policy {
-	setS3Policy=$(aws s3api put-bucket-policy --bucket $s3bucketname --policy file://policy.json --output=json --profile $profile 2>&1)
+	setS3Policy=$(aws s3api put-bucket-policy --bucket $s3bucketname --policy file://policy.json --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$setS3Policy"
 	fi
@@ -88,7 +108,7 @@ function setS3Policy {
 
 # Validate the new policy
 function validateS3Policy {
-	bucketpolicy=$(aws s3api get-bucket-policy --bucket $s3bucketname --output=text --profile $profile 2>&1)
+	bucketpolicy=$(aws s3api get-bucket-policy --bucket $s3bucketname --output=text 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$bucketpolicy"
 	fi

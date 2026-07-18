@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will rename an existing VPC Security Group by creating an identical new group
 # Security Groups must exist in the same VPC and region
 # Note: this script is somewhat experimental and you should manually verify all results before applying the new group!!!
@@ -77,7 +84,7 @@ function validateVPCID(){
 	fi
 	if [ "$VPCID" = "YOUR-VPC-ID-HERE" ] || [ -z "$VPCID" ]; then
 		# Count number of VPCs
-		DESCRIBEVPCS=$(aws ec2 describe-vpcs --profile $profile 2>&1)
+		DESCRIBEVPCS=$(aws ec2 describe-vpcs 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$DESCRIBEVPCS"
 		fi
@@ -112,7 +119,7 @@ function validateVPCID(){
 			HorizontalRule
 			# Get VPC Names
 			for vpcid in $FOUNDVPCS; do
-				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" --profile $profile 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+				echo $vpcid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$vpcid" "Name=key,Values=Name" 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
 			done
 			echo
 			read -r -p "Please specify VPC ID (ex. vpc-abcd1234): " VPCID
@@ -122,7 +129,7 @@ function validateVPCID(){
 		fi
 	fi
 
-	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" --profile $profile 2>&1)
+	CHECKVPC=$(aws ec2 describe-vpcs --vpc-ids "$VPCID" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$CHECKVPC"
 	fi
@@ -135,7 +142,7 @@ function validateVPCID(){
 
 # Describe Security Groups
 function describeSGS(){
-	describeSGS=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPCID" --output=json --profile $profile 2>&1) # | jq '.SecurityGroups | .[] | .GroupName')
+	describeSGS=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPCID" --output=json 2>&1) # | jq '.SecurityGroups | .[] | .GroupName')
 	if [ ! $? -eq 0 ]; then
 		fail "$describeSGS"
 	fi
@@ -149,8 +156,8 @@ function describeSGS(){
 	HorizontalRule
 	# Get SG Names
 	for sgid in $sgIDs; do
-		echo $sgid - Group Name: $(aws ec2 describe-security-groups --group-ids $sgid --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | cut -d \" -f2)
-		# echo $sgid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$sgid" "Name=key,Values=Name" --profile $profile 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
+		echo $sgid - Group Name: $(aws ec2 describe-security-groups --group-ids $sgid 2>&1 | jq '.SecurityGroups | .[] | .GroupName' | cut -d \" -f2)
+		# echo $sgid - Name: $(aws ec2 describe-tags --filters "Name=resource-id,Values=$sgid" "Name=key,Values=Name" 2>&1 | jq '.Tags | .[] | .Value' | cut -d \" -f2)
 	done
 	echo
 }
@@ -162,7 +169,7 @@ function selectSGS(){
 	if [ -z "$SGID1" ]; then
 		fail "Must specify a valid Security Group ID."
 	fi
-	describeSGID1=$(aws ec2 describe-security-groups --group-ids $SGID1 --profile $profile 2>&1)
+	describeSGID1=$(aws ec2 describe-security-groups --group-ids $SGID1 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$describeSGID1"
 	fi
@@ -185,7 +192,7 @@ function createGroup(){
 	echo
 	HorizontalRule
 	echo "Creating Security Group: $1"
-	createGroup=$(aws ec2 create-security-group --group-name "$1" --description "$2" --vpc-id $VPCID --profile $profile 2>&1)
+	createGroup=$(aws ec2 create-security-group --group-name "$1" --description "$2" --vpc-id $VPCID 2>&1)
 	if echo $createGroup | grep -q 'InvalidGroup.Duplicate'; then
 		tput setaf 1; echo "Error: The security group $1 already exists." && tput sgr0
 		HorizontalRule
@@ -193,7 +200,7 @@ function createGroup(){
 		DATE=$(date +%m-%d-%Y)
 		GROUPNAME="$1-$DATE"
 		echo "Creating Security Group: $GROUPNAME"
-		createGroup=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$2" --vpc-id $VPCID --profile $profile 2>&1)
+		createGroup=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$2" --vpc-id $VPCID 2>&1)
 	fi
 	if [ ! $? -eq 0 ]; then
 		fail "$createGroup"
@@ -209,7 +216,7 @@ function createGroup(){
 		fail "$SGID"
 	fi
 	echo "New Security Group ID:" $SGID
-	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$1" --profile $profile 2>&1)
+	TAG=$(aws ec2 create-tags --resources $SGID --tags Key=Name,Value="$1" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$TAG"
 	fi
@@ -218,7 +225,7 @@ function createGroup(){
 	fi
 	HorizontalRule
 	echo
-	describeNewSG=$(aws ec2 describe-security-groups --group-ids $SGID --profile $profile 2>&1)
+	describeNewSG=$(aws ec2 describe-security-groups --group-ids $SGID 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$describeNewSG"
 	fi
@@ -236,7 +243,7 @@ function AuthorizeSecurityGroupIngress(){
 	HorizontalRule
 	echo
 	json=$(cat "$1")
-	AUTHORIZE=$(aws ec2 authorize-security-group-ingress --cli-input-json "$json" --profile $profile 2>&1)
+	AUTHORIZE=$(aws ec2 authorize-security-group-ingress --cli-input-json "$json" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$AUTHORIZE"
 	fi
@@ -255,7 +262,7 @@ function RevokeSecurityGroupEgress(){
 	HorizontalRule
 	echo
 	json=$(cat "$1")
-	REVOKE=$(aws ec2 revoke-security-group-egress --cli-input-json "$json" --profile $profile 2>&1)
+	REVOKE=$(aws ec2 revoke-security-group-egress --cli-input-json "$json" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$REVOKE"
 	fi
@@ -274,7 +281,7 @@ function AuthorizeSecurityGroupEgress(){
 	HorizontalRule
 	echo
 	json=$(cat "$1")
-	AUTHORIZE=$(aws ec2 authorize-security-group-egress --cli-input-json "$json" --profile $profile 2>&1)
+	AUTHORIZE=$(aws ec2 authorize-security-group-egress --cli-input-json "$json" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$AUTHORIZE"
 	fi
@@ -394,7 +401,7 @@ if [[ $DEBUGMODE = "1" ]]; then
 	echo SGEGRESSTEST1:
 	cat SGEGRESSTEST1
 fi
-SGEGRESSTEST2=$(aws ec2 describe-security-groups --group-ids "$SGID" --profile $profile 2>&1 | jq '.SecurityGroups | .[] | .IpPermissionsEgress' > SGEGRESSTEST2)
+SGEGRESSTEST2=$(aws ec2 describe-security-groups --group-ids "$SGID" 2>&1 | jq '.SecurityGroups | .[] | .IpPermissionsEgress' > SGEGRESSTEST2)
 if [ ! $? -eq 0 ]; then
 	fail "$SGEGRESSTEST2"
 fi

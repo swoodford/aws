@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
 # This script creates AWS CloudWatch alarms based on standard metrics and user input to setup alarms for each environment
 # Requires AWS CLI Setup and you must setup your ALARMACTION
 
@@ -85,12 +92,12 @@ if [[ $SERVERNUM > 0 ]] && echo "$SERVERNUM" | egrep -q '^[0-9]+$'; then
     fi
 
     # Load Balancer Unhealthy Host Check
-    aws cloudwatch put-metric-alarm --alarm-name "$CLIENT Unhealthy Host Check" --alarm-description "$CLIENT Load Balancer Unhealthy Host Detected" --metric-name "UnHealthyHostCount" --namespace "AWS/ELB" --statistic "Sum" --period 60 --threshold 0 --comparison-operator "GreaterThanThreshold" --dimensions Name=LoadBalancerName,Value=$LBID --evaluation-periods 3 --alarm-actions "$ALARMACTION" --profile $profile
+    aws cloudwatch put-metric-alarm --alarm-name "$CLIENT Unhealthy Host Check" --alarm-description "$CLIENT Load Balancer Unhealthy Host Detected" --metric-name "UnHealthyHostCount" --namespace "AWS/ELB" --statistic "Sum" --period 60 --threshold 0 --comparison-operator "GreaterThanThreshold" --dimensions Name=LoadBalancerName,Value=$LBID --evaluation-periods 3 --alarm-actions "$ALARMACTION"
     HorizontalRule
     echo "Load Balancer Unhealthy Host Alarm Set"
     HorizontalRule
     # Load Balancer High Latency Check
-    aws cloudwatch put-metric-alarm --alarm-name "$CLIENT LB High Latency" --alarm-description "$CLIENT Load Balancer High Latency" --metric-name "Latency" --namespace "AWS/ELB" --statistic "Average" --period 60 --threshold 15 --comparison-operator "GreaterThanThreshold" --dimensions Name=LoadBalancerName,Value=$LBID --evaluation-periods 2 --alarm-actions "$ALARMACTION" --profile $profile
+    aws cloudwatch put-metric-alarm --alarm-name "$CLIENT LB High Latency" --alarm-description "$CLIENT Load Balancer High Latency" --metric-name "Latency" --namespace "AWS/ELB" --statistic "Average" --period 60 --threshold 15 --comparison-operator "GreaterThanThreshold" --dimensions Name=LoadBalancerName,Value=$LBID --evaluation-periods 2 --alarm-actions "$ALARMACTION"
     HorizontalRule
     echo "Load Balancer High Latency Alarm Set"
     HorizontalRule
@@ -113,13 +120,13 @@ if [[ $SERVERNUM > 0 ]] && echo "$SERVERNUM" | egrep -q '^[0-9]+$'; then
     if [[ "$INSTANCEID" =~ ^([i]-........)|([i]-.................)$ ]]; then
 
         # CPU Check
-        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT $SERVERNAME CPU Check" --alarm-description "$CLIENT $ENVIRONMENT $SERVERNAME CPU usage >90% for 5 minutes" --namespace "AWS/EC2" --dimensions Name=InstanceId,Value=$INSTANCEID --metric-name "CPUUtilization" --statistic "Average" --comparison-operator "GreaterThanThreshold" --unit "Percent" --period 60 --threshold 90 --evaluation-periods 5 --alarm-actions "$ALARMACTION" --profile $profile
+        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT $SERVERNAME CPU Check" --alarm-description "$CLIENT $ENVIRONMENT $SERVERNAME CPU usage >90% for 5 minutes" --namespace "AWS/EC2" --dimensions Name=InstanceId,Value=$INSTANCEID --metric-name "CPUUtilization" --statistic "Average" --comparison-operator "GreaterThanThreshold" --unit "Percent" --period 60 --threshold 90 --evaluation-periods 5 --alarm-actions "$ALARMACTION"
         HorizontalRule
         echo $CLIENT $ENVIRONMENT $SERVERNAME "CPU Check Alarm Set"
         HorizontalRule
 
         # Status Check
-        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT $SERVERNAME Status Check" --alarm-description "$CLIENT $ENVIRONMENT $SERVERNAME Status Check Failed for 5 minutes" --namespace "AWS/EC2" --dimensions Name=InstanceId,Value=$INSTANCEID --metric-name "StatusCheckFailed" --statistic "Maximum" --comparison-operator "GreaterThanThreshold" --unit "Count" --period 60 --threshold 0 --evaluation-periods 5 --alarm-actions "$ALARMACTION" --profile $profile
+        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT $SERVERNAME Status Check" --alarm-description "$CLIENT $ENVIRONMENT $SERVERNAME Status Check Failed for 5 minutes" --namespace "AWS/EC2" --dimensions Name=InstanceId,Value=$INSTANCEID --metric-name "StatusCheckFailed" --statistic "Maximum" --comparison-operator "GreaterThanThreshold" --unit "Count" --period 60 --threshold 0 --evaluation-periods 5 --alarm-actions "$ALARMACTION"
         HorizontalRule
         echo $CLIENT $ENVIRONMENT $SERVERNAME "Status Check Alarm Set"
         HorizontalRule
@@ -163,19 +170,19 @@ read -r -p "Setup Database Alarms? (y/n) " SETUPDB
         fi
 
         # Database CPU Check
-        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT DB CPU Check" --alarm-description "$CLIENT $ENVIRONMENT Database CPU usage >90% for 5 minutes" --metric-name "CPUUtilization" --namespace "AWS/RDS" --statistic "Average" --unit "Percent" --period 60 --threshold 90 --comparison-operator "GreaterThanThreshold" --dimensions Name=DBInstanceIdentifier,Value=$DBID --evaluation-periods 5 --alarm-actions "$ALARMACTION" --profile $profile
+        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT DB CPU Check" --alarm-description "$CLIENT $ENVIRONMENT Database CPU usage >90% for 5 minutes" --metric-name "CPUUtilization" --namespace "AWS/RDS" --statistic "Average" --unit "Percent" --period 60 --threshold 90 --comparison-operator "GreaterThanThreshold" --dimensions Name=DBInstanceIdentifier,Value=$DBID --evaluation-periods 5 --alarm-actions "$ALARMACTION"
         HorizontalRule
         echo $CLIENT $ENVIRONMENT "Database CPU Check Alarm Set"
         HorizontalRule
 
         # Database Memory Usage Check
-        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT DB Mem Check" --alarm-description "$CLIENT $ENVIRONMENT Database Freeable Memory < 200 MB for 5 minutes" --metric-name "FreeableMemory" --namespace "AWS/RDS" --statistic "Average" --unit "Bytes" --period 60 --threshold "200000000" --comparison-operator "LessThanThreshold" --dimensions Name=DBInstanceIdentifier,Value=$DBID --evaluation-periods 5 --alarm-actions "$ALARMACTION" --profile $profile
+        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT DB Mem Check" --alarm-description "$CLIENT $ENVIRONMENT Database Freeable Memory < 200 MB for 5 minutes" --metric-name "FreeableMemory" --namespace "AWS/RDS" --statistic "Average" --unit "Bytes" --period 60 --threshold "200000000" --comparison-operator "LessThanThreshold" --dimensions Name=DBInstanceIdentifier,Value=$DBID --evaluation-periods 5 --alarm-actions "$ALARMACTION"
         HorizontalRule
         echo $CLIENT $ENVIRONMENT "Database Memory Usage Alarm Set"
         HorizontalRule
 
         # Database Available Storage Space Check
-        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT DB Storage Check" --alarm-description "$CLIENT $ENVIRONMENT Database Available Storage Space < 200 MB" --metric-name "FreeStorageSpace" --namespace "AWS/RDS" --statistic "Average" --unit "Bytes" --period 60 --threshold "200000000" --comparison-operator "LessThanThreshold" --dimensions Name=DBInstanceIdentifier,Value=$DBID --evaluation-periods 1 --alarm-actions "$ALARMACTION" --profile $profile
+        aws cloudwatch put-metric-alarm --alarm-name "$CLIENT $ENVIRONMENT DB Storage Check" --alarm-description "$CLIENT $ENVIRONMENT Database Available Storage Space < 200 MB" --metric-name "FreeStorageSpace" --namespace "AWS/RDS" --statistic "Average" --unit "Bytes" --period 60 --threshold "200000000" --comparison-operator "LessThanThreshold" --dimensions Name=DBInstanceIdentifier,Value=$DBID --evaluation-periods 1 --alarm-actions "$ALARMACTION"
         HorizontalRule
         echo $CLIENT $ENVIRONMENT "Database Available Storage Space Alarm Set"
         HorizontalRule

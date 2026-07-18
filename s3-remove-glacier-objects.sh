@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
 # Script to delete all Glacier storage type objects in a single S3 bucket
 # Requires aws s3api, jq
 
@@ -73,7 +80,7 @@ if ! [[ $Proceed =~ ^([yY][eE][sS]|[yY])$ ]]; then
 	fail "Canceled."
 fi
 
-S3BUCKETREGION=$(aws s3api get-bucket-location --bucket "$S3BUCKET" --output text --profile $profile 2>&1)
+S3BUCKETREGION=$(aws s3api get-bucket-location --bucket "$S3BUCKET" --output text 2>&1)
 if [ ! $? -eq 0 ]; then
 	fail "$S3BUCKETREGION"
 else
@@ -84,7 +91,7 @@ else
 	fi
 fi
 
-LISTGLACIER=$(aws s3api list-objects-v2 --bucket "$S3BUCKET" --query "Contents[?StorageClass=='GLACIER'].Key" --output json --profile $profile --max-items 9999 --region $REGION 2>&1)
+LISTGLACIER=$(aws s3api list-objects-v2 --bucket "$S3BUCKET" --query "Contents[?StorageClass=='GLACIER'].Key" --output json --max-items 9999 --region $REGION 2>&1)
 
 if [ ! $? -eq 0 ]; then
 	fail "$LISTGLACIER"
@@ -97,7 +104,7 @@ fi
 
 while read glacier
 do
-	RM=$(aws s3 rm s3://"$S3BUCKET"/"$glacier" --profile $profile --region $REGION 2>&1)
+	RM=$(aws s3 rm s3://"$S3BUCKET"/"$glacier" --region $REGION 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$RM"
 	else

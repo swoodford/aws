@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
 # Script to backup all S3 bucket contents locally
 # Contents of each S3 bucket will be copied to the local subfolder specified
 # Requires aws cli (AWS CLI profile must have IAM permission to access all buckets)
@@ -55,7 +62,7 @@ else
 fi
 
 # List buckets
-LS=$(aws s3 ls --profile $profile 2>&1)
+LS=$(aws s3 ls 2>&1)
 if [ ! $? -eq 0 ]; then
   fail "$LS"
 fi
@@ -90,7 +97,7 @@ do
   echo \#$COUNT $CURRENTBUCKET
 
   # Determine the bucket region
-  REGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text --profile $profile 2>&1)
+  REGION=$(aws s3api get-bucket-location --bucket $CURRENTBUCKET --output text 2>&1)
   if [ ! $? -eq 0 ]; then
     fail "$REGION"
   fi
@@ -99,7 +106,7 @@ do
   fi
 
   # Backup the S3 bucket contents
-  BACKUP=$(aws s3 sync s3://$CURRENTBUCKET $SUBFOLDER/$CURRENTBUCKET/ --region $REGION --profile $profile --quiet 2>&1)
+  BACKUP=$(aws s3 sync s3://$CURRENTBUCKET $SUBFOLDER/$CURRENTBUCKET/ --region $REGION --quiet 2>&1)
   if [ ! $? -eq 0 ]; then
     fail "$BACKUP"
   fi

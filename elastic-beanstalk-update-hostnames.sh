@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script updates the hostname on Elastic Beanstalk servers with their environment name and IP address
 # It also will restart New Relic monitoring if present
 # Requires the AWS CLI and jq
@@ -71,7 +78,7 @@ check_command "jq"
 
 # Get Elastic Beanstalk Environments
 function ebenvironments(){
-	describeenvironments=$(aws elasticbeanstalk describe-environments --output=json --profile $profile 2>&1)
+	describeenvironments=$(aws elasticbeanstalk describe-environments --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$describeenvironments"
 	fi
@@ -89,7 +96,7 @@ function ebenvironments(){
 function ebresources(){
 	while IFS= read -r ebenvironments
 	do
-		describeebresources=$(aws elasticbeanstalk describe-environment-resources --environment-name $ebenvironments --output=json --profile $profile 2>&1)
+		describeebresources=$(aws elasticbeanstalk describe-environment-resources --environment-name $ebenvironments --output=json 2>&1)
 		if [ ! $? -eq 0 ]; then
 			fail "$describeebresources"
 		fi
@@ -121,7 +128,7 @@ function ebresources(){
 			if [[ $DEBUGMODE = "1" ]]; then
 				echo "Getting IP for Instance ID: $currentinstanceid"
 			fi
-			describeinstances=$(aws ec2 describe-instances --instance-ids "$currentinstanceid" --query 'Reservations[*].Instances[*].PublicIpAddress' --output=json --profile $profile 2>&1)
+			describeinstances=$(aws ec2 describe-instances --instance-ids "$currentinstanceid" --query 'Reservations[*].Instances[*].PublicIpAddress' --output=json 2>&1)
 			if [ ! $? -eq 0 ]; then
 				fail "$describeinstances"
 			fi

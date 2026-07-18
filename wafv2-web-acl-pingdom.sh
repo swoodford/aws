@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will Manage WAFV2 Web ACL to allow current Pingdom probe server IPs
 # Allows creating or updating AWS WAFV2 IP Addresses Set and Web ACLs
 # Saves a list of current Pingdom probe server IPs in the file iplist
@@ -150,7 +157,7 @@ function CreateIPSet(){
 		--description "Pingdom Probe Server IPs - $WAFSCOPE" \
 		--ip-address-version IPV4 \
 		--addresses "$ADDRESSES" \
-		--profile "$profile" 2>&1)
+ 2>&1)
 	
 	if [ ! $? -eq 0 ]; then
 		if [[ $DEBUGMODE ]]; then
@@ -177,7 +184,7 @@ function CreateIPSet(){
 
 # Get list of all IP Sets
 function ListIPSets(){
-	LISTSETS=$(aws wafv2 list-ip-sets --scope "$WAFSCOPE" --limit 100 --profile "$profile" 2>&1)
+	LISTSETS=$(aws wafv2 list-ip-sets --scope "$WAFSCOPE" --limit 100 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$LISTSETS"
 	fi
@@ -193,7 +200,7 @@ function ListIPSets(){
 
 # Get list of IPs in a single IP Set
 function GetIPSet(){
-	GETSET=$(aws wafv2 get-ip-set --scope $WAFSCOPE --id "$IPSETID" --name "$CONDITIONNAME" --profile $profile 2>&1)
+	GETSET=$(aws wafv2 get-ip-set --scope $WAFSCOPE --id "$IPSETID" --name "$CONDITIONNAME" 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$GETSET"
 	fi
@@ -220,7 +227,7 @@ function UpdateIPSet(){
 		--name "$CONDITIONNAME" \
 		--addresses "$ADDRESSES" \
 		--lock-token "$LOCKTOKEN" \
-		--profile $profile 2>&1)
+ 2>&1)
 	
 	if [ ! $? -eq 0 ]; then
 		fail "$UPDATESET"
@@ -266,7 +273,7 @@ EOF
 		--default-action Block={} \
 		--rules "$RULES" \
 		--visibility-config SampledRequestsEnabled=true,CloudWatchMetricsEnabled=true,MetricName="$CONDITIONNAME" \
-		--profile $profile 2>&1)
+ 2>&1)
 	
 	if [ ! $? -eq 0 ]; then
 		fail "$CREATEACL"
@@ -359,13 +366,13 @@ function WAF(){
 		# You can't delete an IPSet if it's still used in any Rules or if it still includes any IP addresses.
 		# You can't delete a Rule if it's still used in any WebACL objects.
 
-			# RULENAME=$(aws wafv2 list-rules --limit 99 --output=json --profile $profile 2>&1 | jq '.Rules | .[] | .Name' | grep "$CONDITIONNAME" | cut -d '"' -f2)
-			# RULEID=$(aws wafv2 list-rules --limit 99 --output=json --profile $profile 2>&1 | jq '.Rules | .[] | select(.Name=="'"$RULENAME"'") | .RuleId' | cut -d '"' -f2)
+			# RULENAME=$(aws wafv2 list-rules --limit 99 --output=json 2>&1 | jq '.Rules | .[] | .Name' | grep "$CONDITIONNAME" | cut -d '"' -f2)
+			# RULEID=$(aws wafv2 list-rules --limit 99 --output=json 2>&1 | jq '.Rules | .[] | select(.Name=="'"$RULENAME"'") | .RuleId' | cut -d '"' -f2)
 			# echo
 			# echo "====================================================="
 			# echo "Deleting Rule Name $RULENAME, Rule ID $RULEID"
 			# echo "====================================================="
-			# DELETERULE=$(aws wafv2 delete-rule --rule-id "$RULEID" --profile $profile 2>&1)
+			# DELETERULE=$(aws wafv2 delete-rule --rule-id "$RULEID" 2>&1)
 			# if [ ! $? -eq 0 ]; then
 			# 	fail "$DELETERULE"
 			# else
@@ -376,7 +383,7 @@ function WAF(){
 			# echo "====================================================="
 			# echo "Deleting Set $CONDITIONNAME, Set ID $IPSETID"
 			# echo "====================================================="
-			# DELETESET=$(aws wafv2 delete-ip-set --ip-set-id "$IPSETID" --profile $profile 2>&1)
+			# DELETESET=$(aws wafv2 delete-ip-set --ip-set-id "$IPSETID" 2>&1)
 			# if [ ! $? -eq 0 ]; then
 			# 	fail "$DELETESET"
 			# else
@@ -384,7 +391,7 @@ function WAF(){
 			# 	# echo
 			# 	# echo "====================================================="
 			# 	# echo "Creating Security Group "$GROUPNAME
-			# 	# GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID --profile $profile 2>&1)
+			# 	# GROUPID=$(aws ec2 create-security-group --group-name "$GROUPNAME" --description "$DESCRIPTION" --vpc-id $VPCID 2>&1)
 			# 	# echo $GROUPID
 			# 	# aws ec2 create-tags --resources $(aws ec2 describe-security-groups --output=json | jq '.SecurityGroups | .[] | select(.GroupName=="$GROUPNAME") | .GroupId' | cut -d '"' -f2) --tags Key=Name,Value="$GROUPNAME"
 			# 	# echo "====================================================="

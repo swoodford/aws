@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./aws-profile.sh
+source "$SCRIPT_DIR/aws-profile.sh"
+aws_profile_prepare_args "$@" || exit 1
+set -- "${AWS_SCRIPT_LEGACY_ARGS[@]}"
+
+
 # This script will set CloudWatch Logs Retention Policy to x number of days for all log groups in all regions available
 # Requires the AWS CLI and jq
 
@@ -92,7 +99,7 @@ function GetRegions(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin GetRegions Function"
 	fi
-	AWSregions=$(aws ec2 describe-regions --output=json --profile $profile 2>&1)
+	AWSregions=$(aws ec2 describe-regions --output=json 2>&1)
 	if echo "$AWSregions" | egrep -iq "error"; then
 		fail "$AWSregions"
 	else
@@ -132,7 +139,7 @@ function ListLogGroups(){
 	if [[ $DEBUGMODE = "1" ]]; then
 		echo "Begin ListLogGroups Function"
 	fi
-	ListLogGroups=$(aws logs describe-log-groups --region=$Region --output=json --profile $profile 2>&1)
+	ListLogGroups=$(aws logs describe-log-groups --region=$Region --output=json 2>&1)
 	if [ ! $? -eq 0 ]; then
 		fail "$ListLogGroups"
 	# if echo "$ListLogGroups" | egrep -iq "error|not"; then
@@ -175,7 +182,7 @@ function SetRetentionPolicy(){
 			echo "o0o0o0o"
 			pause
 		fi
-		SetRetentionPolicy=$(aws logs put-retention-policy --region $Region --log-group-name $LogGroup --retention-in-days $RetentionInDays --output=json --profile $profile 2>&1)
+		SetRetentionPolicy=$(aws logs put-retention-policy --region $Region --log-group-name $LogGroup --retention-in-days $RetentionInDays --output=json 2>&1)
 		if echo "$SetRetentionPolicy" | egrep -iq "error|not"; then
 			fail "$SetRetentionPolicy"
 		fi

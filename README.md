@@ -53,6 +53,23 @@ The AWS CLI supports named profiles stored in the config and credentials files. 
 
 `$ aws configure --profile example`
 
+### Running scripts with a specific AWS profile
+
+AWS scripts in this repository now support profile selection in this order of precedence:
+
+1. `--profile <name>` passed to the script
+2. `AWS_PROFILE` environment variable
+3. Legacy first positional argument (for backward compatibility)
+4. AWS CLI default profile/credential chain when none of the above are set
+
+Examples:
+
+`$ ./cloudwatch-logs-search.sh --profile staging`
+
+`$ AWS_PROFILE=production ./cloudwatch-logs-search.sh`
+
+`$ ./cloudwatch-logs-search.sh legacy-profile-name`
+
 ### What is jq?
 
 jq is a lightweight and flexible command-line JSON processor.
